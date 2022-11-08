@@ -1,6 +1,7 @@
 import numpy as np
 import pickle
 import math
+import functools
 
 
 def xavier_init(size, gain=1.0):
@@ -382,7 +383,11 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return np.zeros((1, self.neurons[-1]))  # Replace with your own code
+        res = x
+        layer: Layer
+        for layer in self._layers:
+            res = layer.forward(res)
+        return res
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -406,7 +411,11 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        res = grad_z
+        layer: Layer
+        for layer in self._layers:
+            res = layer.backward(res)
+        return res
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -423,7 +432,9 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        layer: Layer
+        for layer in self._layers:
+            layer.update_params(learning_rate)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
