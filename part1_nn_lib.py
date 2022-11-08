@@ -247,7 +247,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._W = xavier_init(n_in * n_out)
+        self._W = xavier_init((n_in, n_out))
         self._b = None
 
         self._cache_current = None
@@ -362,8 +362,12 @@ class MultiLayerNetwork(object):
         linear_dims = list(zip(neurons_temp, neurons))
         self._layers = []
         for i in range(len(linear_dims)):
-            self._layers.append(LinearLayer(*linear_dims))
-            self._layers.append(str_to_layer[self.activations[i]]())
+            self._layers.append(LinearLayer(*linear_dims[i]))
+            activation_cls = str_to_layer[self.activations[i]]
+            activation = (activation_cls(*linear_dims[i]) if
+                          activation_cls == LinearLayer else
+                          activation_cls())
+            self._layers.append(activation)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
