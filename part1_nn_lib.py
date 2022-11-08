@@ -351,7 +351,19 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._layers = None
+        str_to_layer = {
+            'identity': LinearLayer,
+            'relu': ReluLayer,
+            'sigmoid': SigmoidLayer,
+            'mseloss': MSELossLayer,
+        }
+        neurons_temp: list[int] = [x for x in neurons]
+        neurons_temp.insert(0, input_dim)
+        linear_dims = list(zip(neurons_temp, neurons))
+        self._layers = []
+        for i in range(len(linear_dims)):
+            self._layers.append(LinearLayer(*linear_dims))
+            self._layers.append(str_to_layer[self.activations[i]]())
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
