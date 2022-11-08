@@ -214,6 +214,10 @@ class ReluLayer(Layer):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @staticmethod
+    def softmax(x):
+        pass
+
 
 class LinearLayer(Layer):
     """
@@ -234,7 +238,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._W = None
+        self._W = xavier_init(n_in * n_out)
         self._b = None
 
         self._cache_current = None
@@ -261,7 +265,9 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        res = self._W @ x + self._b
+        self._cache_current = x, res
+        return res
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -284,7 +290,10 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        x, _ = self._cache_current
+        self._grad_W_current = x.T @ grad_z
+        self._grad_b_current = np.ones(self.n_in).T @ grad_z
+        return grad_z @ self._W.T
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -301,7 +310,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        self._W = self._W - learning_rate * self._grad_W_current
 
         #######################################################################
         #                       ** END OF YOUR CODE **
