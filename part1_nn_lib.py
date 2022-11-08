@@ -121,7 +121,9 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return self.sigmoid(x)
+        res = self.sigmoid(x)
+        self._cache_current = x, res
+        return res
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -144,7 +146,8 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        in_arr, out_arr = self._cache_current
+        return grad_z * np.gradient(in_arr, out_arr)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
