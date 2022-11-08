@@ -122,7 +122,7 @@ class SigmoidLayer(Layer):
         #                       ** START OF YOUR CODE **
         #######################################################################
         res = self.sigmoid(x)
-        self._cache_current = x, res
+        self._cache_current = x
         return res
 
         #######################################################################
@@ -146,12 +146,15 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        in_arr, out_arr = self._cache_current
-        return grad_z * np.gradient(in_arr, out_arr)
+        in_arr = self._cache_current
+        return grad_z * self.sigmoid_derivative(in_arr)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
+    def sigmoid_derivative(self, x):
+        return self.sigmoid(x) * (1 - self.sigmoid(x))
 
     @staticmethod
     def sigmoid(x):
