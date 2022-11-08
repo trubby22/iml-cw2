@@ -121,9 +121,8 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        res = self.sigmoid(x)
         self._cache_current = x
-        return res
+        return self.sigmoid(x)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -188,7 +187,8 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        self._cache_current = x
+        return self.softmax(x)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -211,15 +211,20 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        in_arr = self._cache_current
+        return grad_z * self.softmax_derivative(in_arr)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
 
     @staticmethod
+    def softmax_derivative(x):
+        return 1 if x > 0 else 0
+
+    @staticmethod
     def softmax(x):
-        pass
+        return x if x > 0 else 0
 
 
 class LinearLayer(Layer):
