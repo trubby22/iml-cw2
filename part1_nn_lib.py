@@ -1,8 +1,9 @@
 import numpy as np
 import pickle
+import math
 
 
-def xavier_init(size, gain = 1.0):
+def xavier_init(size, gain=1.0):
     """
     Xavier initialization of network weights.
 
@@ -120,7 +121,7 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        return self.sigmoid(x)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -148,6 +149,10 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
+    @staticmethod
+    def sigmoid(x):
+        return 1 / (1 + math.exp(- x))
 
 
 class ReluLayer(Layer):
@@ -345,7 +350,7 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return np.zeros((1, self.neurons[-1])) # Replace with your own code
+        return np.zeros((1, self.neurons[-1]))  # Replace with your own code
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -416,13 +421,13 @@ class Trainer(object):
     """
 
     def __init__(
-        self,
-        network,
-        batch_size,
-        nb_epoch,
-        learning_rate,
-        loss_fun,
-        shuffle_flag,
+            self,
+            network,
+            batch_size,
+            nb_epoch,
+            learning_rate,
+            loss_fun,
+            shuffle_flag,
     ):
         """
         Constructor of the Trainer.
