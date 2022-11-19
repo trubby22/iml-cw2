@@ -188,8 +188,13 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
+        x: np.ndarray
+        (batch_size_in, n_in) = x.shape
         self._cache_current = x
-        return self.softmax(x)
+        res = self.softmax(x)
+        (batch_size_out, n_out) = res.shape
+        assert batch_size_in == batch_size_out
+        return res
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -223,8 +228,11 @@ class ReluLayer(Layer):
     def softmax_derivative(x):
         return 1 if x > 0 else 0
 
+    def softmax(self, x):
+        return np.vectorize(self.softmax_helper)(x)
+
     @staticmethod
-    def softmax(x):
+    def softmax_helper(x):
         return x if x > 0 else 0
 
 
@@ -248,7 +256,7 @@ class LinearLayer(Layer):
         #                       ** START OF YOUR CODE **
         #######################################################################
         self._W = xavier_init((n_in, n_out))
-        self._b = None
+        self._b = np.ones((1, n_out))
 
         self._cache_current = None
         self._grad_W_current = None
@@ -274,10 +282,17 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        res = self._W @ x + self._b
+        x: np.ndarray
+        (batch_size_in, n_in) = x.shape
+        assert n_in == self.n_in
+        batch_size = np.shape(x)[0]
+        batched_biases = np.repeat(self._b, batch_size, axis=0)
+        res = x @ self._W + batched_biases
+        (batch_size_out, n_out) = res.shape
+        assert batch_size_in == batch_size_out
+        assert n_out == self.n_out
         self._cache_current = x, res
         return res
-
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -299,10 +314,17 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
+        grad_z: np.ndarray
+        (batch_size_in, n_out) = grad_z.shape
+        assert n_out == self.n_out
         x, _ = self._cache_current
         self._grad_W_current = x.T @ grad_z
         self._grad_b_current = np.ones(self.n_in).T @ grad_z
-        return grad_z @ self._W.T
+        res = grad_z @ self._W.T
+        (batch_size_out, n_in) = res.shape
+        assert batch_size_in == batch_size_out
+        assert n_in == self.n_in
+        return res
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -364,10 +386,8 @@ class MultiLayerNetwork(object):
         for i in range(len(linear_dims)):
             self._layers.append(LinearLayer(*linear_dims[i]))
             activation_cls = str_to_layer[self.activations[i]]
-            activation = (activation_cls(*linear_dims[i]) if
-                          activation_cls == LinearLayer else
-                          activation_cls())
-            self._layers.append(activation)
+            if activation_cls != LinearLayer:
+                self._layers.append(activation_cls())
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -386,10 +406,11 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
+        x: np.ndarray
         res = x
         layer: Layer
         for layer in self._layers:
-            res = layer.forward(res)
+            res: np.ndarray = layer.forward(res)
         return res
 
         #######################################################################
@@ -568,8 +589,8 @@ class Trainer(object):
             target_batches = np.split(target_dataset, no_splits)
             for input_batch, target_batch in zip(input_batches, target_batches):
                 forward_res = self.network.forward(input_batch)
-                forward_loss = self._loss_layer.forward(forward_res)
-                grad_z = np.gradient(forward_res, forward_loss)
+                forward_loss = self._loss_layer.forward(forward_res, target_batch)
+                grad_z = np.gradient(forward_res, forward_loss, axis=0)
                 backward_res = self.network.backward(grad_z)
                 self.network.update_params(self.learning_rate)
 
