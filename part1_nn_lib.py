@@ -3,6 +3,19 @@ import pickle
 import math
 import functools
 
+import traceback
+
+
+def catch_exception(f):
+    @functools.wraps(f)
+    def func(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            print("Exception caught: {}".format(e))
+            traceback.print_exc()
+    return func
+
 
 def xavier_init(size, gain=1.0):
     """
@@ -28,15 +41,19 @@ class Layer:
     def __init__(self, *args, **kwargs):
         raise NotImplementedError()
 
+    @catch_exception
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
 
+    @catch_exception
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
 
+    @catch_exception
     def backward(self, *args, **kwargs):
         raise NotImplementedError()
 
+    @catch_exception
     def update_params(self, *args, **kwargs):
         pass
 
@@ -45,22 +62,24 @@ class MSELossLayer(Layer):
     """
     MSELossLayer: Computes mean-squared error between y_pred and y_target.
     """
-
+    @catch_exception
     def __init__(self):
         self._cache_current = None
 
-    @staticmethod
+    @staticmethod   
+    @catch_exception
     def _mse(y_pred, y_target):
         return np.mean((y_pred - y_target) ** 2)
 
-    @staticmethod
+    @staticmethod   
+    @catch_exception
     def _mse_grad(y_pred, y_target):
         return 2 * (y_pred - y_target) / len(y_pred)
-
+    @catch_exception
     def forward(self, y_pred, y_target):
         self._cache_current = y_pred, y_target
         return self._mse(y_pred, y_target)
-
+    @catch_exception
     def backward(self):
         return self._mse_grad(*self._cache_current)
 
@@ -70,16 +89,17 @@ class CrossEntropyLossLayer(Layer):
     CrossEntropyLossLayer: Computes the softmax followed by the negative 
     log-likelihood loss.
     """
-
+    @catch_exception
     def __init__(self):
         self._cache_current = None
 
-    @staticmethod
+    @staticmethod   
+    @catch_exception
     def softmax(x):
         numer = np.exp(x - x.max(axis=1, keepdims=True))
         denom = numer.sum(axis=1, keepdims=True)
         return numer / denom
-
+    @catch_exception
     def forward(self, inputs, y_target):
         assert len(inputs) == len(y_target)
         n_obs = len(y_target)
@@ -88,7 +108,7 @@ class CrossEntropyLossLayer(Layer):
 
         out = -1 / n_obs * np.sum(y_target * np.log(probs))
         return out
-
+    @catch_exception
     def backward(self):
         y_target, probs = self._cache_current
         n_obs = len(y_target)
@@ -99,13 +119,13 @@ class SigmoidLayer(Layer):
     """
     SigmoidLayer: Applies sigmoid function elementwise.
     """
-
+    @catch_exception
     def __init__(self):
         """ 
         Constructor of the Sigmoid layer.
         """
         self._cache_current = None
-
+    @catch_exception
     def forward(self, x):
         """ 
         Performs forward pass through the Sigmoid layer.
@@ -123,13 +143,12 @@ class SigmoidLayer(Layer):
         #                       ** START OF YOUR CODE **
         #######################################################################
         self._cache_current = x
-        print("x", x)
         return self.sigmoid(x)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def backward(self, grad_z):
         """
         Given `grad_z`, the gradient of some scalar (e.g. loss) with respect to
@@ -153,11 +172,12 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def sigmoid_derivative(self, x):
         return self.sigmoid(x) * (1 - self.sigmoid(x))
 
-    @staticmethod
+    @staticmethod   
+    @catch_exception
     def sigmoid(x):
         return 1 / (1 + np.exp(-x))
 
@@ -166,13 +186,13 @@ class ReluLayer(Layer):
     """
     ReluLayer: Applies Relu function elementwise.
     """
-
+    @catch_exception
     def __init__(self):
         """
         Constructor of the Relu layer.
         """
         self._cache_current = None
-
+    @catch_exception
     def forward(self, x):
         """ 
         Performs forward pass through the Relu layer.
@@ -200,7 +220,7 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def backward(self, grad_z):
         """
         Given `grad_z`, the gradient of some scalar (e.g. loss) with respect to
@@ -224,18 +244,20 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def softmax_derivative(self, x):
         return np.vectorize(self.softmax_derivative_helper)(x)
-
+    @catch_exception
     def softmax(self, x):
         return np.vectorize(self.softmax_helper)(x)
 
-    @staticmethod
+    @staticmethod   
+    @catch_exception
     def softmax_helper(x):
         return x if x > 0 else 0
 
-    @staticmethod
+    @staticmethod   
+    @catch_exception
     def softmax_derivative_helper(x):
         return 1 if x > 0 else 0
 
@@ -244,7 +266,7 @@ class LinearLayer(Layer):
     """
     LinearLayer: Performs affine transformation of input.
     """
-
+    @catch_exception
     def __init__(self, n_in, n_out):
         """
         Constructor of the linear layer.
@@ -269,7 +291,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def forward(self, x):
         """
         Performs forward pass through the layer (i.e. returns Wx + b).
@@ -302,7 +324,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def backward(self, grad_z):
         """
         Given `grad_z`, the gradient of some scalar (e.g. loss) with respect to
@@ -338,7 +360,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def update_params(self, learning_rate):
         """
         Performs one step of gradient descent with given learning rate on the
@@ -362,7 +384,7 @@ class MultiLayerNetwork(object):
     MultiLayerNetwork: A network consisting of stacked linear layers and
     activation functions.
     """
-
+    @catch_exception
     def __init__(self, input_dim, neurons, activations):
         """
         Constructor of the multi layer network.
@@ -400,7 +422,7 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def forward(self, x):
         """
         Performs forward pass through the network.
@@ -425,10 +447,10 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def __call__(self, x):
         return self.forward(x)
-
+    @catch_exception
     def backward(self, grad_z):
         """
         Performs backward pass through the network.
@@ -455,7 +477,7 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def update_params(self, learning_rate):
         """
         Performs one step of gradient descent with given learning rate on the
@@ -497,7 +519,7 @@ class Trainer(object):
     """
     Trainer: Object that manages the training of a neural network.
     """
-
+    @catch_exception
     def __init__(
             self,
             network,
@@ -539,7 +561,8 @@ class Trainer(object):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-    @staticmethod
+    @staticmethod   
+    @catch_exception
     def shuffle(input_dataset, target_dataset):
         """
         Returns shuffled versions of the inputs.
@@ -557,14 +580,14 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        indices = np.arange(input_dataset.shape[0])
+        indices = np.arange(input_dataset.shape[999999])
         np.random.shuffle(indices)
         return input_dataset[indices], target_dataset[indices]
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def train(self, input_dataset, target_dataset):
         """
         Main training loop. Performs the following steps `nb_epoch` times:
@@ -610,7 +633,7 @@ class Trainer(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def eval_loss(self, input_dataset, target_dataset):
         """
         Function that evaluate the loss function for given data. Returns
@@ -642,7 +665,7 @@ class Preprocessor(object):
     Preprocessor: Object used to apply "preprocessing" operation to datasets.
     The object can also be used to revert the changes.
     """
-
+    @catch_exception
     def __init__(self, data):
         """
         Initializes the Preprocessor according to the provided dataset.
@@ -664,7 +687,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def apply(self, data):
         """
         Apply the pre-processing operations to the provided dataset.
@@ -683,7 +706,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
-
+    @catch_exception
     def revert(self, data):
         """
         Revert the pre-processing operations to retrieve the original dataset.
