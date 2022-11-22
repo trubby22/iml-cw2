@@ -720,12 +720,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        dirty_res = self.x_min + (data - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
-
-        def round_num(x):
-            return round(x, 2)
-
-        return np.vectorize(round_num)(dirty_res)
+        return self.x_min + (data - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
