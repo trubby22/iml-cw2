@@ -224,9 +224,8 @@ class ReluLayer(Layer):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-    @staticmethod
-    def softmax_derivative(x):
-        return 1 if x > 0 else 0
+    def softmax_derivative(self, x):
+        return np.vectorize(self.softmax_derivative_helper)(x)
 
     def softmax(self, x):
         return np.vectorize(self.softmax_helper)(x)
@@ -234,6 +233,10 @@ class ReluLayer(Layer):
     @staticmethod
     def softmax_helper(x):
         return x if x > 0 else 0
+
+    @staticmethod
+    def softmax_derivative_helper(x):
+        return 1 if x > 0 else 0
 
 
 class LinearLayer(Layer):
@@ -255,8 +258,8 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._W = xavier_init((n_in, n_out))
-        self._b = np.ones((1, n_out))
+        self._W = np.zeros(shape=(n_in, n_out))
+        self._b = np.zeros((1, n_out))
 
         self._cache_current = None
         self._grad_W_current = None
@@ -285,14 +288,16 @@ class LinearLayer(Layer):
         x: np.ndarray
         (batch_size_in, n_in) = x.shape
         assert n_in == self.n_in
-        batch_size = np.shape(x)[0]
-        batched_biases = np.repeat(self._b, batch_size, axis=0)
-        res = x @ self._W + batched_biases
-        (batch_size_out, n_out) = res.shape
+
+        batch_b = np.repeat(self._b, batch_size_in, axis=0)
+        z = x @ self._W + batch_b
+
+        (batch_size_out, n_out) = z.shape
         assert batch_size_in == batch_size_out
         assert n_out == self.n_out
-        self._cache_current = x, res
-        return res
+
+        self._cache_current = x, z
+        return z
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -317,13 +322,16 @@ class LinearLayer(Layer):
         grad_z: np.ndarray
         (batch_size_in, n_out) = grad_z.shape
         assert n_out == self.n_out
-        x, _ = self._cache_current
+
+        x, z = self._cache_current
         self._grad_W_current = x.T @ grad_z
-        self._grad_b_current = np.ones(self.n_in).T @ grad_z
+        self._grad_b_current = np.ones(batch_size_in).T @ grad_z
         res = grad_z @ self._W.T
+
         (batch_size_out, n_in) = res.shape
         assert batch_size_in == batch_size_out
         assert n_in == self.n_in
+
         return res
 
         #######################################################################
@@ -437,7 +445,9 @@ class MultiLayerNetwork(object):
         #######################################################################
         res = grad_z
         layer: Layer
-        for layer in self._layers:
+        reverse_layers = [x for x in self._layers]
+        reverse_layers.reverse()
+        for layer in reverse_layers:
             res = layer.backward(res)
         return res
 
@@ -581,17 +591,19 @@ class Trainer(object):
         target_dataset: np.ndarray
         self.network: MultiLayerNetwork
         self._loss_layer: Layer
+
         for i in range(self.nb_epoch):
             if self.shuffle_flag:
                 input_dataset, target_dataset = self.shuffle(input_dataset, target_dataset)
             no_splits = int(input_dataset.shape[0] / self.batch_size)
             input_batches = np.split(input_dataset, no_splits)
             target_batches = np.split(target_dataset, no_splits)
-            for input_batch, target_batch in zip(input_batches, target_batches):
-                forward_res = self.network.forward(input_batch)
-                forward_loss = self._loss_layer.forward(forward_res, target_batch)
-                grad_z = np.gradient(forward_res, forward_loss, axis=0)
-                backward_res = self.network.backward(grad_z)
+            for input_batch, expected_output in zip(input_batches, target_batches):
+                actual_output = self.network.forward(input_batch)
+                self._loss_layer.forward(actual_output, expected_output)
+                grad_z = self._loss_layer.backward()
+                # grad_z = np.gradient(actual_output, loss, axis=0)
+                self.network.backward(grad_z)
                 self.network.update_params(self.learning_rate)
 
         #######################################################################
@@ -615,7 +627,9 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return self._loss_layer.forward(target_dataset)
+        self.network: MultiLayerNetwork
+        actual_output = self.network.forward(input_dataset)
+        return self._loss_layer.forward(actual_output, target_dataset)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
