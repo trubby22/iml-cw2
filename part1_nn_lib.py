@@ -620,8 +620,8 @@ class Trainer(object):
             if self.shuffle_flag:
                 input_dataset, target_dataset = self.shuffle(input_dataset, target_dataset)
             no_splits = int(input_dataset.shape[0] / self.batch_size)
-            input_batches = np.split(input_dataset, no_splits)
-            target_batches = np.split(target_dataset, no_splits)
+            input_batches = np.array_split(input_dataset, no_splits)
+            target_batches = np.array_split(target_dataset, no_splits)
             for input_batch, expected_output in zip(input_batches, target_batches):
                 actual_output = self.network.forward(input_batch)
                 self._loss_layer.forward(actual_output, expected_output)
