@@ -556,9 +556,8 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        np.random.shuffle(input_dataset)
-        np.random.shuffle(target_dataset)
-        return input_dataset, target_dataset
+        rng = np.random.default_rng()
+        return rng.permutation(input_dataset), rng.permutation(target_dataset)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -696,7 +695,12 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return self.x_min + (data - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
+        dirty_res = self.x_min + (data - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
+
+        def round_num(x):
+            return round(x, 2)
+
+        return np.vectorize(round_num)(dirty_res)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -726,6 +730,13 @@ def example_main():
 
     x_train_pre = prep_input.apply(x_train)
     x_val_pre = prep_input.apply(x_val)
+
+    # Test
+
+    assert (prep_input.revert(x_train_pre) == x_train).all()
+    assert (prep_input.revert(x_val_pre) == x_val).all()
+
+    # End test
 
     trainer = Trainer(
         network=net,
