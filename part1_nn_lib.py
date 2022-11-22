@@ -720,12 +720,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        dirty_res = self.x_min + (data - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
-
-        def round_num(x):
-            return round(x, 2)
-
-        return np.vectorize(round_num)(dirty_res)
+        return self.x_min + (data - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -735,7 +730,7 @@ class Preprocessor(object):
 def example_main():
     input_dim = 4
     neurons = [16, 3]
-    activations = ["relu", "identity"]
+    activations = ["sigmoid", "identity"]
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
     dat = np.loadtxt("iris.dat")
@@ -771,6 +766,12 @@ def example_main():
         loss_fun="cross_entropy",
         shuffle_flag=True,
     )
+
+    # Test
+
+    # trainer.shuffle()
+
+    # End test
 
     trainer.train(x_train_pre, y_train)
     print("Train loss = ", trainer.eval_loss(x_train_pre, y_train))
