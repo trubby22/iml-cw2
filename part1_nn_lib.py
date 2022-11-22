@@ -580,7 +580,7 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        indices = np.arange(input_dataset.shape[999999])
+        indices = np.arange(input_dataset.shape[0])
         np.random.shuffle(indices)
         return input_dataset[indices], target_dataset[indices]
 
@@ -720,7 +720,12 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return self.x_min + (data - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
+        dirty_res = self.x_min + (data - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
+
+        def round_num(x):
+            return round(x, 2)
+
+        return np.vectorize(round_num)(dirty_res)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -730,7 +735,7 @@ class Preprocessor(object):
 def example_main():
     input_dim = 4
     neurons = [16, 3]
-    activations = ["sigmoid", "identity"]
+    activations = ["relu", "identity"]
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
     dat = np.loadtxt("iris.dat")
@@ -766,12 +771,6 @@ def example_main():
         loss_fun="cross_entropy",
         shuffle_flag=True,
     )
-
-    # Test
-
-    # trainer.shuffle()
-
-    # End test
 
     trainer.train(x_train_pre, y_train)
     print("Train loss = ", trainer.eval_loss(x_train_pre, y_train))
