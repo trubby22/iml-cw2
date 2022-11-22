@@ -557,8 +557,9 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        rng = np.random.default_rng()
-        return rng.permutation(input_dataset), rng.permutation(target_dataset)
+        indices = np.arange(input_dataset.shape[0])
+        np.random.shuffle(indices)
+        return input_dataset[indices], target_dataset[indices]
 
         #######################################################################
         #                       ** END OF YOUR CODE **
