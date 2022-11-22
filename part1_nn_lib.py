@@ -123,6 +123,7 @@ class SigmoidLayer(Layer):
         #                       ** START OF YOUR CODE **
         #######################################################################
         self._cache_current = x
+        print("x", x)
         return self.sigmoid(x)
 
         #######################################################################
@@ -158,7 +159,7 @@ class SigmoidLayer(Layer):
 
     @staticmethod
     def sigmoid(x):
-        return 1 / (1 + math.exp(- x))
+        return 1 / (1 + np.exp(-x))
 
 
 class ReluLayer(Layer):
