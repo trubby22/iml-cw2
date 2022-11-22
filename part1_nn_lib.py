@@ -728,16 +728,29 @@ class Preprocessor(object):
 
 
 def example_main():
-    input_dim = 4
-    neurons = [16, 3]
-    activations = ["relu", "identity"]
+    run()
+
+
+def run(
+        input_dim=4,
+        neurons=[16, 18, 10, 3],
+        activations=("relu", "identity", "sigmoid", "relu"),
+        batch_size=8,
+        nb_epoch=1000,
+        learning_rate=0.01,
+        loss_fun='cross_entropy',
+        shuffle_flag=True,
+        ):
+    TOTAL_SIZE = 7
+    assert 1 <= input_dim <= TOTAL_SIZE
+    neurons[-1] = TOTAL_SIZE - input_dim
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
     dat = np.loadtxt("iris.dat")
     np.random.shuffle(dat)
 
-    x = dat[:, :4]
-    y = dat[:, 4:]
+    x = dat[:, :input_dim]
+    y = dat[:, input_dim:]
 
     split_idx = int(0.8 * len(x))
 
@@ -760,11 +773,11 @@ def example_main():
 
     trainer = Trainer(
         network=net,
-        batch_size=8,
-        nb_epoch=1000,
-        learning_rate=0.01,
-        loss_fun="cross_entropy",
-        shuffle_flag=True,
+        batch_size=batch_size,
+        nb_epoch=nb_epoch,
+        learning_rate=learning_rate,
+        loss_fun=loss_fun,
+        shuffle_flag=shuffle_flag,
     )
 
     trainer.train(x_train_pre, y_train)
