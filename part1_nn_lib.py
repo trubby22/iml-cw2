@@ -677,10 +677,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        features = data[:, :-1]
-        labels = data[:, -1:]
-        normalised_features = self.a + (features - self.x_min) * (self.b - self.a) / (self.x_max - self.x_min)
-        return np.concatenate((normalised_features, labels), axis=1)
+        return self.a + (data - self.x_min) * (self.b - self.a) / (self.x_max - self.x_min)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -699,16 +696,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        features = data[:, :-1]
-        labels = data[:, -1:]
-
-        initial_features = self.x_min + (features - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
-
-        def round_num(x):
-            return round(x, 2)
-
-        rounded_features = np.vectorize(round_num)(initial_features)
-        return np.concatenate((rounded_features, labels), axis=1)
+        return self.x_min + (data - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
