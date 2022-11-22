@@ -758,8 +758,8 @@ def example_main():
 
     # Test
 
-    assert (prep_input.revert(x_train_pre) == x_train).all()
-    assert (prep_input.revert(x_val_pre) == x_val).all()
+    assert np.isclose(prep_input.revert(x_train_pre), x_train).all()
+    assert np.isclose(prep_input.revert(x_val_pre), x_val).all()
 
     # End test
 
