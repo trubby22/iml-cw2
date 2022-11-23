@@ -1,19 +1,29 @@
-import numpy as np
-import pickle
-import math
 import functools
-
+import pickle
 import traceback
+
+import numpy as np
+
+ENABLE_CATCH_EXCEPTION = False
+ENABLE_LOGGING = False
+
+
+def log(*args, **kwargs):
+    if ENABLE_LOGGING:
+        print(*args, **kwargs)
 
 
 def catch_exception(f):
     @functools.wraps(f)
     def func(*args, **kwargs):
+        if not ENABLE_CATCH_EXCEPTION:
+            return f(*args, **kwargs)
         try:
             return f(*args, **kwargs)
         except Exception as e:
             print("Exception caught: {}".format(e))
             traceback.print_exc()
+
     return func
 
 
@@ -62,23 +72,26 @@ class MSELossLayer(Layer):
     """
     MSELossLayer: Computes mean-squared error between y_pred and y_target.
     """
+
     @catch_exception
     def __init__(self):
         self._cache_current = None
 
-    @staticmethod   
+    @staticmethod
     @catch_exception
     def _mse(y_pred, y_target):
         return np.mean((y_pred - y_target) ** 2)
 
-    @staticmethod   
+    @staticmethod
     @catch_exception
     def _mse_grad(y_pred, y_target):
         return 2 * (y_pred - y_target) / len(y_pred)
+
     @catch_exception
     def forward(self, y_pred, y_target):
         self._cache_current = y_pred, y_target
         return self._mse(y_pred, y_target)
+
     @catch_exception
     def backward(self):
         return self._mse_grad(*self._cache_current)
@@ -89,16 +102,18 @@ class CrossEntropyLossLayer(Layer):
     CrossEntropyLossLayer: Computes the softmax followed by the negative 
     log-likelihood loss.
     """
+
     @catch_exception
     def __init__(self):
         self._cache_current = None
 
-    @staticmethod   
+    @staticmethod
     @catch_exception
     def softmax(x):
         numer = np.exp(x - x.max(axis=1, keepdims=True))
         denom = numer.sum(axis=1, keepdims=True)
         return numer / denom
+
     @catch_exception
     def forward(self, inputs, y_target):
         assert len(inputs) == len(y_target)
@@ -108,6 +123,7 @@ class CrossEntropyLossLayer(Layer):
 
         out = -1 / n_obs * np.sum(y_target * np.log(probs))
         return out
+
     @catch_exception
     def backward(self):
         y_target, probs = self._cache_current
@@ -119,12 +135,14 @@ class SigmoidLayer(Layer):
     """
     SigmoidLayer: Applies sigmoid function elementwise.
     """
+
     @catch_exception
     def __init__(self):
         """ 
         Constructor of the Sigmoid layer.
         """
         self._cache_current = None
+
     @catch_exception
     def forward(self, x):
         """ 
@@ -148,6 +166,7 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def backward(self, grad_z):
         """
@@ -172,11 +191,12 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def sigmoid_derivative(self, x):
         return self.sigmoid(x) * (1 - self.sigmoid(x))
 
-    @staticmethod   
+    @staticmethod
     @catch_exception
     def sigmoid(x):
         return 1 / (1 + np.exp(-x))
@@ -186,12 +206,14 @@ class ReluLayer(Layer):
     """
     ReluLayer: Applies Relu function elementwise.
     """
+
     @catch_exception
     def __init__(self):
         """
         Constructor of the Relu layer.
         """
         self._cache_current = None
+
     @catch_exception
     def forward(self, x):
         """ 
@@ -220,6 +242,7 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def backward(self, grad_z):
         """
@@ -244,19 +267,21 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def softmax_derivative(self, x):
         return np.vectorize(self.softmax_derivative_helper)(x)
+
     @catch_exception
     def softmax(self, x):
         return np.vectorize(self.softmax_helper)(x)
 
-    @staticmethod   
+    @staticmethod
     @catch_exception
     def softmax_helper(x):
         return x if x > 0 else 0
 
-    @staticmethod   
+    @staticmethod
     @catch_exception
     def softmax_derivative_helper(x):
         return 1 if x > 0 else 0
@@ -266,6 +291,7 @@ class LinearLayer(Layer):
     """
     LinearLayer: Performs affine transformation of input.
     """
+
     @catch_exception
     def __init__(self, n_in, n_out):
         """
@@ -291,6 +317,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def forward(self, x):
         """
@@ -324,6 +351,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def backward(self, grad_z):
         """
@@ -360,6 +388,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def update_params(self, learning_rate):
         """
@@ -384,6 +413,7 @@ class MultiLayerNetwork(object):
     MultiLayerNetwork: A network consisting of stacked linear layers and
     activation functions.
     """
+
     @catch_exception
     def __init__(self, input_dim, neurons, activations):
         """
@@ -422,6 +452,7 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def forward(self, x):
         """
@@ -447,9 +478,11 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def __call__(self, x):
         return self.forward(x)
+
     @catch_exception
     def backward(self, grad_z):
         """
@@ -477,6 +510,7 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def update_params(self, learning_rate):
         """
@@ -519,6 +553,7 @@ class Trainer(object):
     """
     Trainer: Object that manages the training of a neural network.
     """
+
     @catch_exception
     def __init__(
             self,
@@ -561,7 +596,7 @@ class Trainer(object):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-    @staticmethod   
+    @staticmethod
     @catch_exception
     def shuffle(input_dataset, target_dataset):
         """
@@ -587,6 +622,7 @@ class Trainer(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def train(self, input_dataset, target_dataset):
         """
@@ -633,6 +669,7 @@ class Trainer(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def eval_loss(self, input_dataset, target_dataset):
         """
@@ -665,6 +702,7 @@ class Preprocessor(object):
     Preprocessor: Object used to apply "preprocessing" operation to datasets.
     The object can also be used to revert the changes.
     """
+
     @catch_exception
     def __init__(self, data):
         """
@@ -687,6 +725,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def apply(self, data):
         """
@@ -706,6 +745,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
     @catch_exception
     def revert(self, data):
         """
@@ -728,66 +768,67 @@ class Preprocessor(object):
 
 
 def example_main():
-    run()
+    net = set_up_network(4)
+    x_train, x_val, y_train, y_val = load_data(4)
+    x_train_pre, x_val_pre = preprocess_data(x_train, x_val)
+    trainer = train_model(net, x_train_pre, y_train)
+    evaluate_loss(trainer, x_train_pre, x_val_pre, y_train, y_val)
+    evaluate_accuracy(net, x_val_pre, y_val)
 
 
-def run(
-        input_dim=4,
-        neurons=[16, 3],
-        activations=("relu", "identity"),
+def evaluate_accuracy(net, x_val_pre, y_val):
+    preds = net(x_val_pre).argmax(axis=1).squeeze()
+    targets = y_val.argmax(axis=1).squeeze()
+    accuracy = (preds == targets).mean()
+    log("Validation accuracy: {}".format(accuracy))
+    return accuracy
+
+
+def evaluate_loss(trainer, x_train_pre, x_val_pre, y_train, y_val):
+    train_loss = trainer.eval_loss(x_train_pre, y_train)
+    validation_loss = trainer.eval_loss(x_val_pre, y_val)
+    log("Train loss = ", train_loss)
+    log("Validation loss = ", validation_loss)
+    return train_loss, validation_loss
+
+
+def train_model(net, x_train_pre, y_train):
+    trainer = Trainer(
+        network=net,
         batch_size=8,
         nb_epoch=1000,
         learning_rate=0.01,
-        loss_fun='cross_entropy',
+        loss_fun="cross_entropy",
         shuffle_flag=True,
-        ):
-    TOTAL_SIZE = 7
-    assert 1 <= input_dim < TOTAL_SIZE
-    neurons[-1] = TOTAL_SIZE - input_dim
-    net = MultiLayerNetwork(input_dim, neurons, activations)
+    )
+    trainer.train(x_train_pre, y_train)
+    return trainer
 
+
+def preprocess_data(x_train, x_val):
+    prep_input = Preprocessor(x_train)
+    x_train_pre = prep_input.apply(x_train)
+    x_val_pre = prep_input.apply(x_val)
+    return x_train_pre, x_val_pre
+
+
+def load_data(input_num):
     dat = np.loadtxt("iris.dat")
     np.random.shuffle(dat)
-
-    x = dat[:, :input_dim]
-    y = dat[:, input_dim:]
-
+    x = dat[:, :input_num]
+    y = dat[:, input_num:]
     split_idx = int(0.8 * len(x))
-
     x_train = x[:split_idx]
     y_train = y[:split_idx]
     x_val = x[split_idx:]
     y_val = y[split_idx:]
+    return x_train, x_val, y_train, y_val
 
-    prep_input = Preprocessor(x_train)
 
-    x_train_pre = prep_input.apply(x_train)
-    x_val_pre = prep_input.apply(x_val)
-
-    # Test
-
-    assert np.isclose(prep_input.revert(x_train_pre), x_train).all()
-    assert np.isclose(prep_input.revert(x_val_pre), x_val).all()
-
-    # End test
-
-    trainer = Trainer(
-        network=net,
-        batch_size=batch_size,
-        nb_epoch=nb_epoch,
-        learning_rate=learning_rate,
-        loss_fun=loss_fun,
-        shuffle_flag=shuffle_flag,
-    )
-
-    trainer.train(x_train_pre, y_train)
-    print("Train loss = ", trainer.eval_loss(x_train_pre, y_train))
-    print("Validation loss = ", trainer.eval_loss(x_val_pre, y_val))
-
-    preds = net(x_val_pre).argmax(axis=1).squeeze()
-    targets = y_val.argmax(axis=1).squeeze()
-    accuracy = (preds == targets).mean()
-    print("Validation accuracy: {}".format(accuracy))
+def set_up_network(input_dim):
+    neurons = [16, 3]
+    activations = ["relu", "identity"]
+    return MultiLayerNetwork(input_dim, neurons, activations)
 
 
 if __name__ == "__main__":
