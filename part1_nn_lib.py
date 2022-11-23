@@ -1,7 +1,30 @@
-import numpy as np
-import pickle
-import math
 import functools
+import pickle
+import traceback
+
+import numpy as np
+
+ENABLE_CATCH_EXCEPTION = False
+ENABLE_LOGGING = False
+
+
+def log(*args, **kwargs):
+    if ENABLE_LOGGING:
+        print(*args, **kwargs)
+
+
+def catch_exception(f):
+    @functools.wraps(f)
+    def func(*args, **kwargs):
+        if not ENABLE_CATCH_EXCEPTION:
+            return f(*args, **kwargs)
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            print("Exception caught: {}".format(e))
+            traceback.print_exc()
+
+    return func
 
 
 def xavier_init(size, gain=1.0):
@@ -28,15 +51,19 @@ class Layer:
     def __init__(self, *args, **kwargs):
         raise NotImplementedError()
 
+    @catch_exception
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
 
+    @catch_exception
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
 
+    @catch_exception
     def backward(self, *args, **kwargs):
         raise NotImplementedError()
 
+    @catch_exception
     def update_params(self, *args, **kwargs):
         pass
 
@@ -46,21 +73,26 @@ class MSELossLayer(Layer):
     MSELossLayer: Computes mean-squared error between y_pred and y_target.
     """
 
+    @catch_exception
     def __init__(self):
         self._cache_current = None
 
     @staticmethod
+    @catch_exception
     def _mse(y_pred, y_target):
         return np.mean((y_pred - y_target) ** 2)
 
     @staticmethod
+    @catch_exception
     def _mse_grad(y_pred, y_target):
         return 2 * (y_pred - y_target) / len(y_pred)
 
+    @catch_exception
     def forward(self, y_pred, y_target):
         self._cache_current = y_pred, y_target
         return self._mse(y_pred, y_target)
 
+    @catch_exception
     def backward(self):
         return self._mse_grad(*self._cache_current)
 
@@ -71,15 +103,18 @@ class CrossEntropyLossLayer(Layer):
     log-likelihood loss.
     """
 
+    @catch_exception
     def __init__(self):
         self._cache_current = None
 
     @staticmethod
+    @catch_exception
     def softmax(x):
         numer = np.exp(x - x.max(axis=1, keepdims=True))
         denom = numer.sum(axis=1, keepdims=True)
         return numer / denom
 
+    @catch_exception
     def forward(self, inputs, y_target):
         assert len(inputs) == len(y_target)
         n_obs = len(y_target)
@@ -89,6 +124,7 @@ class CrossEntropyLossLayer(Layer):
         out = -1 / n_obs * np.sum(y_target * np.log(probs))
         return out
 
+    @catch_exception
     def backward(self):
         y_target, probs = self._cache_current
         n_obs = len(y_target)
@@ -100,12 +136,14 @@ class SigmoidLayer(Layer):
     SigmoidLayer: Applies sigmoid function elementwise.
     """
 
+    @catch_exception
     def __init__(self):
         """ 
         Constructor of the Sigmoid layer.
         """
         self._cache_current = None
 
+    @catch_exception
     def forward(self, x):
         """ 
         Performs forward pass through the Sigmoid layer.
@@ -129,6 +167,7 @@ class SigmoidLayer(Layer):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def backward(self, grad_z):
         """
         Given `grad_z`, the gradient of some scalar (e.g. loss) with respect to
@@ -153,12 +192,14 @@ class SigmoidLayer(Layer):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def sigmoid_derivative(self, x):
         return self.sigmoid(x) * (1 - self.sigmoid(x))
 
     @staticmethod
+    @catch_exception
     def sigmoid(x):
-        return 1 / (1 + math.exp(- x))
+        return 1 / (1 + np.exp(-x))
 
 
 class ReluLayer(Layer):
@@ -166,12 +207,14 @@ class ReluLayer(Layer):
     ReluLayer: Applies Relu function elementwise.
     """
 
+    @catch_exception
     def __init__(self):
         """
         Constructor of the Relu layer.
         """
         self._cache_current = None
 
+    @catch_exception
     def forward(self, x):
         """ 
         Performs forward pass through the Relu layer.
@@ -200,6 +243,7 @@ class ReluLayer(Layer):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def backward(self, grad_z):
         """
         Given `grad_z`, the gradient of some scalar (e.g. loss) with respect to
@@ -224,16 +268,23 @@ class ReluLayer(Layer):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-    @staticmethod
-    def softmax_derivative(x):
-        return 1 if x > 0 else 0
+    @catch_exception
+    def softmax_derivative(self, x):
+        return np.vectorize(self.softmax_derivative_helper)(x)
 
+    @catch_exception
     def softmax(self, x):
         return np.vectorize(self.softmax_helper)(x)
 
     @staticmethod
+    @catch_exception
     def softmax_helper(x):
         return x if x > 0 else 0
+
+    @staticmethod
+    @catch_exception
+    def softmax_derivative_helper(x):
+        return 1 if x > 0 else 0
 
 
 class LinearLayer(Layer):
@@ -241,6 +292,7 @@ class LinearLayer(Layer):
     LinearLayer: Performs affine transformation of input.
     """
 
+    @catch_exception
     def __init__(self, n_in, n_out):
         """
         Constructor of the linear layer.
@@ -255,8 +307,8 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._W = xavier_init((n_in, n_out))
-        self._b = np.ones((1, n_out))
+        self._W = np.zeros(shape=(n_in, n_out))
+        self._b = np.zeros((1, n_out))
 
         self._cache_current = None
         self._grad_W_current = None
@@ -266,6 +318,7 @@ class LinearLayer(Layer):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def forward(self, x):
         """
         Performs forward pass through the layer (i.e. returns Wx + b).
@@ -285,18 +338,21 @@ class LinearLayer(Layer):
         x: np.ndarray
         (batch_size_in, n_in) = x.shape
         assert n_in == self.n_in
-        batch_size = np.shape(x)[0]
-        batched_biases = np.repeat(self._b, batch_size, axis=0)
-        res = x @ self._W + batched_biases
-        (batch_size_out, n_out) = res.shape
+
+        batch_b = np.repeat(self._b, batch_size_in, axis=0)
+        z = x @ self._W + batch_b
+
+        (batch_size_out, n_out) = z.shape
         assert batch_size_in == batch_size_out
         assert n_out == self.n_out
-        self._cache_current = x, res
-        return res
+
+        self._cache_current = x, z
+        return z
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def backward(self, grad_z):
         """
         Given `grad_z`, the gradient of some scalar (e.g. loss) with respect to
@@ -317,19 +373,23 @@ class LinearLayer(Layer):
         grad_z: np.ndarray
         (batch_size_in, n_out) = grad_z.shape
         assert n_out == self.n_out
-        x, _ = self._cache_current
+
+        x, z = self._cache_current
         self._grad_W_current = x.T @ grad_z
-        self._grad_b_current = np.ones(self.n_in).T @ grad_z
+        self._grad_b_current = np.ones(batch_size_in).T @ grad_z
         res = grad_z @ self._W.T
+
         (batch_size_out, n_in) = res.shape
         assert batch_size_in == batch_size_out
         assert n_in == self.n_in
+
         return res
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def update_params(self, learning_rate):
         """
         Performs one step of gradient descent with given learning rate on the
@@ -354,6 +414,7 @@ class MultiLayerNetwork(object):
     activation functions.
     """
 
+    @catch_exception
     def __init__(self, input_dim, neurons, activations):
         """
         Constructor of the multi layer network.
@@ -392,6 +453,7 @@ class MultiLayerNetwork(object):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def forward(self, x):
         """
         Performs forward pass through the network.
@@ -417,9 +479,11 @@ class MultiLayerNetwork(object):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def __call__(self, x):
         return self.forward(x)
 
+    @catch_exception
     def backward(self, grad_z):
         """
         Performs backward pass through the network.
@@ -437,7 +501,9 @@ class MultiLayerNetwork(object):
         #######################################################################
         res = grad_z
         layer: Layer
-        for layer in self._layers:
+        reverse_layers = [x for x in self._layers]
+        reverse_layers.reverse()
+        for layer in reverse_layers:
             res = layer.backward(res)
         return res
 
@@ -445,6 +511,7 @@ class MultiLayerNetwork(object):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def update_params(self, learning_rate):
         """
         Performs one step of gradient descent with given learning rate on the
@@ -487,6 +554,7 @@ class Trainer(object):
     Trainer: Object that manages the training of a neural network.
     """
 
+    @catch_exception
     def __init__(
             self,
             network,
@@ -529,6 +597,7 @@ class Trainer(object):
         #######################################################################
 
     @staticmethod
+    @catch_exception
     def shuffle(input_dataset, target_dataset):
         """
         Returns shuffled versions of the inputs.
@@ -546,14 +615,15 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        np.random.shuffle(input_dataset)
-        np.random.shuffle(target_dataset)
-        return input_dataset, target_dataset
+        indices = np.arange(input_dataset.shape[0])
+        np.random.shuffle(indices)
+        return input_dataset[indices], target_dataset[indices]
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def train(self, input_dataset, target_dataset):
         """
         Main training loop. Performs the following steps `nb_epoch` times:
@@ -581,23 +651,26 @@ class Trainer(object):
         target_dataset: np.ndarray
         self.network: MultiLayerNetwork
         self._loss_layer: Layer
+
         for i in range(self.nb_epoch):
             if self.shuffle_flag:
                 input_dataset, target_dataset = self.shuffle(input_dataset, target_dataset)
             no_splits = int(input_dataset.shape[0] / self.batch_size)
-            input_batches = np.split(input_dataset, no_splits)
-            target_batches = np.split(target_dataset, no_splits)
-            for input_batch, target_batch in zip(input_batches, target_batches):
-                forward_res = self.network.forward(input_batch)
-                forward_loss = self._loss_layer.forward(forward_res, target_batch)
-                grad_z = np.gradient(forward_res, forward_loss, axis=0)
-                backward_res = self.network.backward(grad_z)
+            input_batches = np.array_split(input_dataset, no_splits)
+            target_batches = np.array_split(target_dataset, no_splits)
+            for input_batch, expected_output in zip(input_batches, target_batches):
+                actual_output = self.network.forward(input_batch)
+                self._loss_layer.forward(actual_output, expected_output)
+                grad_z = self._loss_layer.backward()
+                # grad_z = np.gradient(actual_output, loss, axis=0)
+                self.network.backward(grad_z)
                 self.network.update_params(self.learning_rate)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def eval_loss(self, input_dataset, target_dataset):
         """
         Function that evaluate the loss function for given data. Returns
@@ -615,7 +688,9 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return self._loss_layer.forward(target_dataset)
+        self.network: MultiLayerNetwork
+        actual_output = self.network.forward(input_dataset)
+        return self._loss_layer.forward(actual_output, target_dataset)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -628,6 +703,7 @@ class Preprocessor(object):
     The object can also be used to revert the changes.
     """
 
+    @catch_exception
     def __init__(self, data):
         """
         Initializes the Preprocessor according to the provided dataset.
@@ -650,6 +726,7 @@ class Preprocessor(object):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def apply(self, data):
         """
         Apply the pre-processing operations to the provided dataset.
@@ -669,6 +746,7 @@ class Preprocessor(object):
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    @catch_exception
     def revert(self, data):
         """
         Revert the pre-processing operations to retrieve the original dataset.
@@ -690,29 +768,31 @@ class Preprocessor(object):
 
 
 def example_main():
-    input_dim = 4
-    neurons = [16, 3]
-    activations = ["relu", "identity"]
-    net = MultiLayerNetwork(input_dim, neurons, activations)
+    net = set_up_network(4)
+    x_train, x_val, y_train, y_val = load_data(4)
+    x_train_pre, x_val_pre = preprocess_data(x_train, x_val)
+    trainer = train_model(net, x_train_pre, y_train)
+    evaluate_loss(trainer, x_train_pre, x_val_pre, y_train, y_val)
+    evaluate_accuracy(net, x_val_pre, y_val)
 
-    dat = np.loadtxt("iris.dat")
-    np.random.shuffle(dat)
 
-    x = dat[:, :4]
-    y = dat[:, 4:]
+def evaluate_accuracy(net, x_val_pre, y_val):
+    preds = net(x_val_pre).argmax(axis=1).squeeze()
+    targets = y_val.argmax(axis=1).squeeze()
+    accuracy = (preds == targets).mean()
+    log("Validation accuracy: {}".format(accuracy))
+    return accuracy
 
-    split_idx = int(0.8 * len(x))
 
-    x_train = x[:split_idx]
-    y_train = y[:split_idx]
-    x_val = x[split_idx:]
-    y_val = y[split_idx:]
+def evaluate_loss(trainer, x_train_pre, x_val_pre, y_train, y_val):
+    train_loss = trainer.eval_loss(x_train_pre, y_train)
+    validation_loss = trainer.eval_loss(x_val_pre, y_val)
+    log("Train loss = ", train_loss)
+    log("Validation loss = ", validation_loss)
+    return train_loss, validation_loss
 
-    prep_input = Preprocessor(x_train)
 
-    x_train_pre = prep_input.apply(x_train)
-    x_val_pre = prep_input.apply(x_val)
-
+def train_model(net, x_train_pre, y_train):
     trainer = Trainer(
         network=net,
         batch_size=8,
@@ -721,15 +801,34 @@ def example_main():
         loss_fun="cross_entropy",
         shuffle_flag=True,
     )
-
     trainer.train(x_train_pre, y_train)
-    print("Train loss = ", trainer.eval_loss(x_train_pre, y_train))
-    print("Validation loss = ", trainer.eval_loss(x_val_pre, y_val))
+    return trainer
 
-    preds = net(x_val_pre).argmax(axis=1).squeeze()
-    targets = y_val.argmax(axis=1).squeeze()
-    accuracy = (preds == targets).mean()
-    print("Validation accuracy: {}".format(accuracy))
+
+def preprocess_data(x_train, x_val):
+    prep_input = Preprocessor(x_train)
+    x_train_pre = prep_input.apply(x_train)
+    x_val_pre = prep_input.apply(x_val)
+    return x_train_pre, x_val_pre
+
+
+def load_data(input_num):
+    dat = np.loadtxt("iris.dat")
+    np.random.shuffle(dat)
+    x = dat[:, :input_num]
+    y = dat[:, input_num:]
+    split_idx = int(0.8 * len(x))
+    x_train = x[:split_idx]
+    y_train = y[:split_idx]
+    x_val = x[split_idx:]
+    y_val = y[split_idx:]
+    return x_train, x_val, y_train, y_val
+
+
+def set_up_network(input_dim):
+    neurons = [16, 3]
+    activations = ["relu", "identity"]
+    return MultiLayerNetwork(input_dim, neurons, activations)
 
 
 if __name__ == "__main__":
