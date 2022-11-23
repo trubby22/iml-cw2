@@ -1,11 +1,29 @@
-import torch
 import pickle
 import numpy as np
 import pandas as pd
 
+from torch import tensor, from_numpy, nn, optim, float32, reshape
+from torch.utils.data import TensorDataset, DataLoader
+from torchvision import transforms
+
+from sklearn.preprocessing import Normalizer, LabelBinarizer
+
+class NeuralNetwork(nn.Module):
+    def __init__(self, size):
+        super(NeuralNetwork, self).__init__()
+        self.flatten = nn.Flatten()
+        self.layer_stack = nn.Sequential(
+            nn.Linear(size, 1)
+        )
+
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.layer_stack(x)
+        return logits
+
 class Regressor():
 
-    def __init__(self, x, nb_epoch = 1000):
+    def __init__(self, x, encoder = LabelBinarizer(), normalizer = Normalizer(), loss_fn=nn.MSELoss(), lr=0.001, nb_epoch = 1000):
         # You can add any input parameters you need
         # Remember to set them with a default value for LabTS tests
         """ 
@@ -24,10 +42,16 @@ class Regressor():
         #######################################################################
 
         # Replace this code with your own
+        self.encoder = encoder
+        self.normalizer = normalizer
+
         X, _ = self._preprocessor(x, training = True)
         self.input_size = X.shape[1]
         self.output_size = 1
         self.nb_epoch = nb_epoch 
+        self.model = NeuralNetwork(self.input_size)
+        self.loss_fn = loss_fn
+        self.optimiser = optim.SGD(self.model.parameters(), lr=lr)
         return
 
         #######################################################################
@@ -59,7 +83,17 @@ class Regressor():
 
         # Replace this code with your own
         # Return preprocessed x and y, return None for y if it was None
-        return x, (y if isinstance(y, pd.DataFrame) else None)
+        
+        # return x, (y if isinstance(y, pd.DataFrame) else None)
+        x_filled = x.fillna(method="bfill", axis=1)
+
+        #TODO: encode all categorical values
+        x_filled["ocean_proximity"] = self.encoder.fit_transform(x_filled["ocean_proximity"]) if training else self.encoder.transform(x_filled["ocean_proximity"]) 
+
+        #TODO: dont normalize ocean_proximity
+        x_norm = self.normalizer.fit_transform(x_filled) if training else self.normalizer.transform(x_filled) 
+        
+        return from_numpy(x_norm).to(float32), (from_numpy(y.values.astype(np.float32)) if y is not None else None)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -85,6 +119,18 @@ class Regressor():
         #######################################################################
 
         X, Y = self._preprocessor(x, y = y, training = True) # Do not forget
+        
+        for t in range(self.nb_epoch):
+            print(f"Epoch {t + 1}\n-------------------------------")
+            y_hat = reshape(self.model(X), (-1,))
+            loss = self.loss_fn(y_hat, Y)
+
+            self.optimiser.zero_grad()
+            loss.backward()
+            self.optimiser.step()
+
+            print(f"loss: {loss}")
+
         return self
 
         #######################################################################
