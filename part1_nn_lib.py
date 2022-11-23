@@ -733,8 +733,8 @@ def example_main():
 
 def run(
         input_dim=4,
-        neurons=[16, 18, 10, 3],
-        activations=("relu", "identity", "sigmoid", "relu"),
+        neurons=[16, 3],
+        activations=("relu", "identity"),
         batch_size=8,
         nb_epoch=1000,
         learning_rate=0.01,
@@ -742,7 +742,7 @@ def run(
         shuffle_flag=True,
         ):
     TOTAL_SIZE = 7
-    assert 1 <= input_dim <= TOTAL_SIZE
+    assert 1 <= input_dim < TOTAL_SIZE
     neurons[-1] = TOTAL_SIZE - input_dim
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
