@@ -468,12 +468,10 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        x: np.ndarray
-        res = x
         layer: Layer
         for layer in self._layers:
-            res: np.ndarray = layer.forward(res)
-        return res
+            x = layer.forward(x)
+        return x
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -499,13 +497,12 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        res = grad_z
         layer: Layer
         reverse_layers = [x for x in self._layers]
         reverse_layers.reverse()
         for layer in reverse_layers:
-            res = layer.backward(res)
-        return res
+            grad_z = layer.backward(grad_z)
+        return grad_z
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -647,28 +644,43 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        input_dataset: np.ndarray
-        target_dataset: np.ndarray
-        self.network: MultiLayerNetwork
-        self._loss_layer: Layer
-
         for i in range(self.nb_epoch):
-            if self.shuffle_flag:
-                input_dataset, target_dataset = self.shuffle(input_dataset, target_dataset)
-            no_splits = int(input_dataset.shape[0] / self.batch_size)
-            input_batches = np.array_split(input_dataset, no_splits)
-            target_batches = np.array_split(target_dataset, no_splits)
-            for input_batch, expected_output in zip(input_batches, target_batches):
-                actual_output = self.network.forward(input_batch)
-                self._loss_layer.forward(actual_output, expected_output)
-                grad_z = self._loss_layer.backward()
-                # grad_z = np.gradient(actual_output, loss, axis=0)
-                self.network.backward(grad_z)
-                self.network.update_params(self.learning_rate)
+            input_dataset, target_dataset = self.train_1_epoch(input_dataset, target_dataset)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
+    def train_1_epoch(self, input_dataset: np.ndarray, target_dataset: np.ndarray):
+        if self.shuffle_flag:
+            input_dataset, target_dataset = self.shuffle(input_dataset, target_dataset)
+        no_splits = int(input_dataset.shape[0] / self.batch_size)
+        input_batches = np.array_split(input_dataset, no_splits)
+        target_batches = np.array_split(target_dataset, no_splits)
+        for input_batch, expected_output in zip(input_batches, target_batches):
+            self.train_1_batch(
+                input_batch,
+                expected_output,
+                input_dataset,
+                target_dataset,
+            )
+        return input_dataset, target_dataset
+
+    def train_1_batch(
+            self,
+            input_batch: np.ndarray,
+            expected_output: np.ndarray,
+            input_dataset: np.ndarray,
+            target_dataset: np.ndarray,
+    ):
+        self.network: MultiLayerNetwork
+        self._loss_layer: Layer
+
+        actual_output = self.network.forward(input_batch)
+        self._loss_layer.forward(actual_output, expected_output)
+        grad_z = self._loss_layer.backward()
+        self.network.backward(grad_z)
+        self.network.update_params(self.learning_rate)
 
     @catch_exception
     def eval_loss(self, input_dataset, target_dataset):

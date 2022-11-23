@@ -4,6 +4,47 @@ import math
 from part1_nn_lib import *
 
 
+class TestTrainer(Trainer):
+    def __init__(
+            self,
+            network,
+            batch_size,
+            nb_epoch,
+            learning_rate,
+            loss_fun,
+            shuffle_flag,
+    ):
+        super().__init__(
+            network,
+            batch_size,
+            nb_epoch,
+            learning_rate,
+            loss_fun,
+            shuffle_flag,
+        )
+        self.loss = math.inf
+
+    def train_1_batch(
+            self,
+            input_batch: np.ndarray,
+            expected_output: np.ndarray,
+            input_dataset: np.ndarray,
+            target_dataset: np.ndarray,
+    ):
+        super().train_1_batch(
+            input_batch,
+            expected_output,
+            input_dataset,
+            target_dataset
+        )
+        loss = self.eval_loss(
+            input_dataset,
+            target_dataset
+        )
+        assert loss <= self.loss
+        self.loss = loss
+
+
 class TestPart1Methods(unittest.TestCase):
     def test_example_main_works(self):
         example_main()
@@ -96,10 +137,28 @@ class TestPart1Methods(unittest.TestCase):
                 '''.rstrip()
             )
 
-    def test_matrix_sizes_are_as_expected(self):
-        pass
+    def test_overall_loss_decreases_on_every_batch_or_remains_constant(self):
+        net = set_up_network(4)
+        x_train, x_val, y_train, y_val = load_data(4)
+        x_train_pre, x_val_pre = preprocess_data(x_train, x_val)
+        trainer = self.train_model_using_test_trainer(net, x_train_pre, y_train)
+        evaluate_loss(trainer, x_train_pre, x_val_pre, y_train, y_val)
+        evaluate_accuracy(net, x_val_pre, y_val)
 
-    def test_loss_decreases_on_every_epoch_or_remains_constant(self):
+    @staticmethod
+    def train_model_using_test_trainer(net, x_train_pre, y_train):
+        trainer = TestTrainer(
+            network=net,
+            batch_size=8,
+            nb_epoch=1000,
+            learning_rate=0.01,
+            loss_fun="cross_entropy",
+            shuffle_flag=True,
+        )
+        trainer.train(x_train_pre, y_train)
+        return trainer
+
+    def test_matrix_sizes_are_as_expected(self):
         pass
 
     def test_network_backpropagation_is_calculated_correctly_by_individual_layers(self):
@@ -112,6 +171,21 @@ class TestPart1Methods(unittest.TestCase):
         pass
 
     def test_preprocessor_can_handle_categorical_input_and_labels(self):
+        pass
+
+    def test_linear_layer(self):
+        pass
+
+    def test_network(self):
+        pass
+
+    def test_trainer(self):
+        pass
+
+    def test_pre_processor(self):
+        pass
+
+    def test_activation_layers(self):
         pass
 
 
