@@ -288,8 +288,6 @@ def example_main():
     error = regressor.score(x_train, y_train)
     print("\nRegressor error: {}\n".format(error))
 
-    load_regressor()
-
 
 if __name__ == "__main__":
     example_main()
