@@ -15,19 +15,21 @@ import traceback
 def catch_exception(f):
     @functools.wraps(f)
     def func(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except Exception as e:
-            print("Exception caught: {}".format(e))
-            traceback.print_exc()
+        return f(*args, **kwargs)
+        # try:
+        #     return f(*args, **kwargs)
+        # except Exception as e:
+        #     print("Exception caught: {}".format(e))
+        #     traceback.print_exc()
 
     return func
 
 def catch_all_exceptions():
     def decorate(cls):
         for attr in cls.__dict__:
-            if callable(getattr(cls, attr)):
-                setattr(cls, attr, catch_exception(getattr(cls, attr)))
+            continue
+            # if callable(getattr(cls, attr)):
+            #     setattr(cls, attr, catch_exception(getattr(cls, attr)))
         return cls
     return decorate
 
@@ -182,7 +184,7 @@ class Regressor():
         #######################################################################
 
         X, _ = self._preprocessor(x, training = False) # Do not forget
-        return self.model(X).numpy(force=True)
+        return self.model(X).detach().numpy()
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -208,7 +210,7 @@ class Regressor():
 
         X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
         y_hat = self.model(X)
-        return mean_squared_error(y_hat.numpy(force=True), Y.numpy(force=True))
+        return mean_squared_error(y_hat.detach().numpy(), Y.detach().numpy())
 
         #######################################################################
         #                       ** END OF YOUR CODE **
