@@ -100,7 +100,7 @@ class Regressor():
         #######################################################################
 
         
-    def fit(self, x, y):
+    def fit(self, x, y, debug = False):
         """
         Regressor training function
 
@@ -121,7 +121,6 @@ class Regressor():
         X, Y = self._preprocessor(x, y = y, training = True) # Do not forget
         
         for t in range(self.nb_epoch):
-            print(f"Epoch {t + 1}\n-------------------------------")
             y_hat = self.model(X)
             loss = self.loss_fn(y_hat, Y)
 
@@ -129,7 +128,9 @@ class Regressor():
             loss.backward()
             self.optimiser.step()
 
-            print(f"loss: {loss}")
+            if debug:
+                print(f"Epoch {t + 1}\n-------------------------------")
+                print(f"loss: {loss}")
 
         return self
 
