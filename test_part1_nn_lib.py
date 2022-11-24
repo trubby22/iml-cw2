@@ -28,18 +28,14 @@ class TestTrainer(Trainer):
             self,
             input_batch: np.ndarray,
             expected_output: np.ndarray,
-            input_dataset: np.ndarray,
-            target_dataset: np.ndarray,
     ):
         super().train_1_batch(
             input_batch,
             expected_output,
-            input_dataset,
-            target_dataset
         )
         loss = self.eval_loss(
-            input_dataset,
-            target_dataset
+            input_batch,
+            expected_output
         )
         assert loss <= self.loss
         self.loss = loss
@@ -77,7 +73,7 @@ class TestPart1Methods(unittest.TestCase):
             ),
             MultiLayerNetwork(
                 4,
-                [3, 2, 4] * 3,
+                [2, 4, 3] * 3,
                 ['sigmoid', 'relu', 'identity'] * 3
             )
         ]
@@ -137,7 +133,7 @@ class TestPart1Methods(unittest.TestCase):
                 '''.rstrip()
             )
 
-    def test_overall_loss_decreases_on_every_batch_or_remains_constant(self):
+    def test_batch_loss_decreases_on_every_batch_or_remains_constant(self):
         net = set_up_network(4)
         x_train, x_val, y_train, y_val = load_data(4)
         x_train_pre, x_val_pre = preprocess_data(x_train, x_val)
@@ -158,9 +154,6 @@ class TestPart1Methods(unittest.TestCase):
         trainer.train(x_train_pre, y_train)
         return trainer
 
-    def test_matrix_sizes_are_as_expected(self):
-        pass
-
     def test_network_backpropagation_is_calculated_correctly_by_individual_layers(self):
         pass
 
@@ -168,6 +161,9 @@ class TestPart1Methods(unittest.TestCase):
         pass
 
     def test_layer_backpropagation_function_returns_correct_matrix(self):
+        pass
+
+    def test_matrix_sizes_are_as_expected(self):
         pass
 
     def test_preprocessor_can_handle_categorical_input_and_labels(self):
