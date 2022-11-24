@@ -9,6 +9,29 @@ from torchvision import transforms
 from sklearn.preprocessing import Normalizer, LabelBinarizer
 from sklearn.metrics import mean_squared_error
 
+import functools
+import traceback
+
+def catch_exception(f):
+    @functools.wraps(f)
+    def func(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            print("Exception caught: {}".format(e))
+            traceback.print_exc()
+
+    return func
+
+def catch_all_exceptions():
+    def decorate(cls):
+        for attr in cls.__dict__:
+            if callable(getattr(cls, attr)):
+                setattr(cls, attr, catch_exception(getattr(cls, attr)))
+        return cls
+    return decorate
+
+@catch_all_exceptions()
 class NeuralNetwork(nn.Module):
     def __init__(self, size):
         super(NeuralNetwork, self).__init__()
@@ -22,6 +45,7 @@ class NeuralNetwork(nn.Module):
         logits = self.layer_stack(x)
         return logits
 
+@catch_all_exceptions()
 class Regressor():
 
     def __init__(self, x, encoder = LabelBinarizer(), normalizer = Normalizer(), loss_fn=nn.MSELoss(), lr=0.001, nb_epoch = 1000):
@@ -190,7 +214,7 @@ class Regressor():
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-
+@catch_exception
 def save_regressor(trained_model): 
     """ 
     Utility function to save the trained regressor model in part2_model.pickle.
@@ -200,7 +224,7 @@ def save_regressor(trained_model):
         pickle.dump(trained_model, target)
     print("\nSaved model in part2_model.pickle\n")
 
-
+@catch_exception
 def load_regressor(): 
     """ 
     Utility function to load the trained regressor model in part2_model.pickle.
@@ -212,7 +236,7 @@ def load_regressor():
     return trained_model
 
 
-
+@catch_exception
 def RegressorHyperParameterSearch(): 
     # Ensure to add whatever inputs you deem necessary to this function
     """
@@ -238,7 +262,7 @@ def RegressorHyperParameterSearch():
     #######################################################################
 
 
-
+@catch_exception
 def example_main():
 
     output_label = "median_house_value"
@@ -268,4 +292,3 @@ def example_main():
 
 if __name__ == "__main__":
     example_main()
-
