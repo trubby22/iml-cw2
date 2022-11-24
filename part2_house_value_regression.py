@@ -7,6 +7,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from torchvision import transforms
 
 from sklearn.preprocessing import Normalizer, LabelBinarizer
+from sklearn.metrics import mean_squared_error
 
 class NeuralNetwork(nn.Module):
     def __init__(self, size):
@@ -183,7 +184,7 @@ class Regressor():
 
         X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
         y_hat = self.model(X)
-        return self.loss_fn(y_hat, Y)
+        return mean_squared_error(y_hat.numpy(force=True), Y.numpy(force=True))
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -262,6 +263,7 @@ def example_main():
     # Error
     error = regressor.score(x_train, y_train)
     print("\nRegressor error: {}\n".format(error))
+    print(type(error))
 
 
 if __name__ == "__main__":
