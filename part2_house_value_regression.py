@@ -156,7 +156,7 @@ class Regressor():
         #######################################################################
 
         X, _ = self._preprocessor(x, training = False) # Do not forget
-        return reshape(self.model(X), (-1,))
+        return self.model(X).numpy(force=True)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
