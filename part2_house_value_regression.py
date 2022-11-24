@@ -122,7 +122,7 @@ class Regressor():
         
         for t in range(self.nb_epoch):
             print(f"Epoch {t + 1}\n-------------------------------")
-            y_hat = reshape(self.model(X), (-1,))
+            y_hat = self.model(X)
             loss = self.loss_fn(y_hat, Y)
 
             self.optimiser.zero_grad()
@@ -181,7 +181,7 @@ class Regressor():
         #######################################################################
 
         X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
-        y_hat = reshape(self.model(X), (-1,))
+        y_hat = self.model(X)
         return self.loss_fn(y_hat, Y)
 
         #######################################################################
@@ -254,7 +254,7 @@ def example_main():
     # This example trains on the whole available dataset. 
     # You probably want to separate some held-out data 
     # to make sure the model isn't overfitting
-    regressor = Regressor(x_train, nb_epoch = 10)
+    regressor = Regressor(x_train, nb_epoch = 1000)
     regressor.fit(x_train, y_train)
     save_regressor(regressor)
 
