@@ -5,7 +5,7 @@ import traceback
 import numpy as np
 
 ENABLE_CATCH_EXCEPTION = False
-ENABLE_LOGGING = True
+ENABLE_LOGGING = False
 ROW_SIZE = 7
 
 
@@ -310,7 +310,8 @@ class LinearLayer(Layer):
         #######################################################################
         # self._W = np.zeros(shape=(n_in, n_out))
         self._W = xavier_init((n_in, n_out))
-        self._b = np.zeros((1, n_out))
+        # self._b = np.zeros((1, n_out))
+        self._b = xavier_init((1, n_out))
 
         self._cache_current = None
         self._grad_W_current = None
