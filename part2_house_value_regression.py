@@ -15,21 +15,19 @@ import traceback
 def catch_exception(f):
     @functools.wraps(f)
     def func(*args, **kwargs):
-        return f(*args, **kwargs)
-        # try:
-        #     return f(*args, **kwargs)
-        # except Exception as e:
-        #     print("Exception caught: {}".format(e))
-        #     traceback.print_exc()
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            print("Exception caught: {}".format(e))
+            traceback.print_exc()
 
     return func
 
 def catch_all_exceptions():
     def decorate(cls):
         for attr in cls.__dict__:
-            continue
-            # if callable(getattr(cls, attr)):
-            #     setattr(cls, attr, catch_exception(getattr(cls, attr)))
+            if callable(getattr(cls, attr)):
+                setattr(cls, attr, catch_exception(getattr(cls, attr)))
         return cls
     return decorate
 
@@ -289,7 +287,6 @@ def example_main():
     # Error
     error = regressor.score(x_train, y_train)
     print("\nRegressor error: {}\n".format(error))
-    print(type(error))
 
 
 if __name__ == "__main__":
