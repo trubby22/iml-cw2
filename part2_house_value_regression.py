@@ -2,11 +2,11 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from torch import tensor, from_numpy, nn, optim, float32, reshape
+from torch import tensor, from_numpy, nn, optim, float32, reshape, no_grad
 from torch.utils.data import TensorDataset, DataLoader
 from torchvision import transforms
 
-from sklearn.preprocessing import Normalizer, LabelBinarizer
+from sklearn.preprocessing import Normalizer, LabelBinarizer, StandardScaler, LabelEncoder
 from sklearn.metrics import mean_squared_error
 
 import functools
@@ -37,7 +37,11 @@ class NeuralNetwork(nn.Module):
         super(NeuralNetwork, self).__init__()
         self.flatten = nn.Flatten()
         self.layer_stack = nn.Sequential(
-            nn.Linear(size, 1)
+            nn.Linear(size, 32),
+            nn.ReLU(),
+            nn.Linear(32, 16), 
+            nn.ReLU(),
+            nn.Linear(16, 1)
         )
 
     def forward(self, x):
@@ -48,7 +52,7 @@ class NeuralNetwork(nn.Module):
 @catch_all_exceptions()
 class Regressor():
 
-    def __init__(self, x, encoder = LabelBinarizer(), normalizer = Normalizer(), loss_fn=nn.MSELoss(), lr=0.001, nb_epoch = 1000):
+    def __init__(self, x, encoder = LabelEncoder(), normalizer = StandardScaler(), loss_fn=nn.MSELoss(), validator=mean_squared_error, lr=0.001, nb_epoch = 1000):
         # You can add any input parameters you need
         # Remember to set them with a default value for LabTS tests
         """ 
@@ -76,7 +80,8 @@ class Regressor():
         self.nb_epoch = nb_epoch 
         self.model = NeuralNetwork(self.input_size)
         self.loss_fn = loss_fn
-        self.optimiser = optim.SGD(self.model.parameters(), lr=lr)
+        self.validator = validator
+        self.optimiser = optim.Adam(self.model.parameters(), lr=lr)
         return
 
         #######################################################################
@@ -110,22 +115,55 @@ class Regressor():
         # Return preprocessed x and y, return None for y if it was None
         
         # return x, (y if isinstance(y, pd.DataFrame) else None)
-        x_filled = x.fillna(method="bfill", axis=1)
+        x_filled = x.fillna(method="bfill", axis=0, downcast='infer')
 
-        #TODO: encode all categorical values
-        x_filled["ocean_proximity"] = self.encoder.fit_transform(x_filled["ocean_proximity"]) if training else self.encoder.transform(x_filled["ocean_proximity"]) 
+        num_cols = list(x_filled.select_dtypes(include=np.number).columns)
+        cat_cols = list(x_filled.select_dtypes('object').columns)
 
-        #TODO: dont normalize ocean_proximity
-        x_norm = self.normalizer.fit_transform(x_filled) if training else self.normalizer.transform(x_filled) 
+        if training:
+            num_x_norm = self.normalizer.fit_transform(x_filled[num_cols])
+            cat_x_enc = self.encoder.fit_transform(x_filled[cat_cols]).reshape(-1,1)
+        else:
+            num_x_norm = self.normalizer.transform(x_filled[num_cols])
+            cat_x_enc = self.encoder.transform(x_filled[cat_cols]).reshape(-1,1)
+
+        x_concat = np.hstack((num_x_norm, cat_x_enc))
+
+        if isinstance(y, pd.DataFrame):
+            y = from_numpy(y.values.astype(np.float32))
         
-        return from_numpy(x_norm).to(float32), (from_numpy(y.values.astype(np.float32)) if y is not None else None)
+        return from_numpy(x_concat).to(float32), y
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+    def _train_loop(self, x, y, batch_size, debug):
+        dataset = TensorDataset(x, y)
+        dl = DataLoader(dataset = dataset, batch_size = batch_size, shuffle=True)
+
+        size = len(dataset)
+        batch_total_loss = 0
+
+        for batch, (X, Y) in enumerate(dl):
+            Y = reshape(Y, (-1, 1))
+
+            y_hat = self.model(X)
+            loss = self.loss_fn(y_hat, Y)
+            batch_total_loss += loss.item() * len(X)
+
+            self.optimiser.zero_grad()
+            loss.backward()
+            self.optimiser.step()
+
+            if debug and batch % 100 == 0:
+                current = batch * len(X)
+                print(f"loss: {loss} [{current} / {size}]")
+
+        return batch_total_loss
+
         
-    def fit(self, x, y, debug = False):
+    def fit(self, x, y, batch_size = 32, debug = False):
         """
         Regressor training function
 
@@ -146,16 +184,23 @@ class Regressor():
         X, Y = self._preprocessor(x, y = y, training = True) # Do not forget
         
         for t in range(self.nb_epoch):
-            y_hat = self.model(X)
-            loss = self.loss_fn(y_hat, Y)
+            # y_hat = self.model(X)
+            # loss = self.loss_fn(y_hat, Y)
 
-            self.optimiser.zero_grad()
-            loss.backward()
-            self.optimiser.step()
+            # self.optimiser.zero_grad()
+            # loss.backward()
+            # self.optimiser.step()
+
+            total_loss = 0
 
             if debug:
                 print(f"Epoch {t + 1}\n-------------------------------")
-                print(f"loss: {loss}")
+                # print(f"loss: {loss}")
+            total_loss += self._train_loop(X, Y, batch_size, debug)
+
+            if debug:
+                print(f"Average loss: {total_loss / len(X)}")
+
 
         return self
 
@@ -188,7 +233,7 @@ class Regressor():
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-    def score(self, x, y):
+    def score(self, x, y, batch_size = 32, debug = False):
         """
         Function to evaluate the model accuracy on a validation dataset.
 
@@ -206,9 +251,24 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
-        y_hat = self.model(X)
-        return mean_squared_error(y_hat.detach().numpy(), Y.detach().numpy())
+        X_norm, Y_norm = self._preprocessor(x, y = y, training = False) # Do not forget
+        dataset = TensorDataset(X_norm, Y_norm)
+        dl = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
+
+        num_batches = len(dl)
+        test_loss = 0
+        
+        with no_grad():
+            for X, Y in dl:
+                Y = reshape(Y, (-1, 1))
+                y_hat = self.model(X)
+                test_loss += self.loss_fn(y_hat, Y).item()
+
+        test_loss /= num_batches
+        if debug:
+            print(f"Avg loss: {test_loss}")
+        return test_loss
+
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -280,8 +340,8 @@ def example_main():
     # This example trains on the whole available dataset. 
     # You probably want to separate some held-out data 
     # to make sure the model isn't overfitting
-    regressor = Regressor(x_train, nb_epoch = 10)
-    regressor.fit(x_train, y_train)
+    regressor = Regressor(x_train, lr = 1, nb_epoch = 500)
+    regressor.fit(x_train, y_train, debug=True)
     save_regressor(regressor)
 
     # Error
