@@ -5,7 +5,7 @@ import traceback
 import numpy as np
 
 ENABLE_CATCH_EXCEPTION = False
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 ROW_SIZE = 7
 
 
@@ -308,7 +308,8 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._W = np.zeros(shape=(n_in, n_out))
+        # self._W = np.zeros(shape=(n_in, n_out))
+        self._W = xavier_init((n_in, n_out))
         self._b = np.zeros((1, n_out))
 
         self._cache_current = None
@@ -826,7 +827,7 @@ def preprocess_data(x_train, x_val):
 
 def load_data(input_num):
     dat = np.loadtxt("iris.dat")
-    # np.random.shuffle(dat)
+    np.random.shuffle(dat)
     x = dat[:, :input_num]
     y = dat[:, input_num:]
     split_idx = int(0.8 * len(x))
