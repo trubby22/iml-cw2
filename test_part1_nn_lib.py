@@ -5,40 +5,24 @@ from part1_nn_lib import *
 
 
 class TestTrainer(Trainer):
-    def __init__(
-            self,
-            network,
-            batch_size,
-            nb_epoch,
-            learning_rate,
-            loss_fun,
-            shuffle_flag,
-    ):
-        super().__init__(
-            network,
-            batch_size,
-            nb_epoch,
-            learning_rate,
-            loss_fun,
-            shuffle_flag,
-        )
-        self.loss = math.inf
-
     def train_1_batch(
             self,
             input_batch: np.ndarray,
             expected_output: np.ndarray,
     ):
+        pre_loss = self.eval_loss(
+            input_batch,
+            expected_output
+        )
         super().train_1_batch(
             input_batch,
             expected_output,
         )
-        loss = self.eval_loss(
+        post_loss = self.eval_loss(
             input_batch,
             expected_output
         )
-        assert loss <= self.loss
-        self.loss = loss
+        assert post_loss <= pre_loss
 
 
 class TestPart1Methods(unittest.TestCase):
@@ -153,6 +137,33 @@ class TestPart1Methods(unittest.TestCase):
         )
         trainer.train(x_train_pre, y_train)
         return trainer
+
+    def test_accuracy_is_not_very_low(self):
+        net = set_up_network(4)
+        x_train, x_val, y_train, y_val = load_data(4)
+        x_train_pre, x_val_pre = preprocess_data(x_train, x_val)
+        trainer = train_model(net, x_train_pre, y_train)
+        evaluate_loss(trainer, x_train_pre, x_val_pre, y_train, y_val)
+        accuracy = evaluate_accuracy(net, x_val_pre, y_val)
+        self.assertGreaterEqual(accuracy, 0.5)
+
+    def test_can_analyze_various_datasets(self):
+        fpaths = [
+            'wifi_db/clean_dataset.txt',
+            'wifi_db/noisy_dataset.txt',
+        ]
+        for fpath in fpaths:
+            with self.subTest(msg=fpath):
+                self.train_from_file(fpath)
+
+    @staticmethod
+    def train_from_file(fpath):
+        net = set_up_network(input_dim=7, row_size=8)
+        x_train, x_val, y_train, y_val = load_data(input_num=7, fpath=fpath)
+        x_train_pre, x_val_pre = preprocess_data(x_train, x_val)
+        trainer = train_model(net, x_train_pre, y_train)
+        evaluate_loss(trainer, x_train_pre, x_val_pre, y_train, y_val)
+        evaluate_accuracy(net, x_val_pre, y_val)
 
     def test_network_backpropagation_is_calculated_correctly_by_individual_layers(self):
         pass
