@@ -845,8 +845,8 @@ def preprocess_data(x_train, x_val):
     return x_train_pre, x_val_pre
 
 
-def load_data(input_num):
-    dat = np.loadtxt("iris.dat")
+def load_data(input_num, fpath="iris.dat"):
+    dat = np.loadtxt(fpath)
     np.random.shuffle(dat)
     x = dat[:, :input_num]
     y = dat[:, input_num:]
@@ -858,9 +858,9 @@ def load_data(input_num):
     return x_train, x_val, y_train, y_val
 
 
-def set_up_network(input_dim):
-    assert 0 < input_dim < 7
-    neurons = [16, ROW_SIZE - input_dim]
+def set_up_network(input_dim, row_size=ROW_SIZE):
+    assert 0 < input_dim < row_size
+    neurons = [16, row_size - input_dim]
     activations = ["relu", "identity"]
     return MultiLayerNetwork(input_dim, neurons, activations)
 

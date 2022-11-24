@@ -12,6 +12,7 @@ from sklearn.metrics import mean_squared_error
 import functools
 import traceback
 
+
 def catch_exception(f):
     @functools.wraps(f)
     def func(*args, **kwargs):
@@ -23,13 +24,16 @@ def catch_exception(f):
 
     return func
 
+
 def catch_all_exceptions():
     def decorate(cls):
         for attr in cls.__dict__:
             if callable(getattr(cls, attr)):
                 setattr(cls, attr, catch_exception(getattr(cls, attr)))
         return cls
+
     return decorate
+
 
 @catch_all_exceptions()
 class NeuralNetwork(nn.Module):
@@ -45,10 +49,12 @@ class NeuralNetwork(nn.Module):
         logits = self.layer_stack(x)
         return logits
 
+
 @catch_all_exceptions()
 class Regressor():
 
-    def __init__(self, x, encoder = LabelBinarizer(), normalizer = Normalizer(), loss_fn=nn.MSELoss(), lr=0.001, nb_epoch = 1000):
+    def __init__(self, x, encoder=LabelBinarizer(), normalizer=Normalizer(), loss_fn=nn.MSELoss(), lr=0.001,
+                 nb_epoch=1000):
         # You can add any input parameters you need
         # Remember to set them with a default value for LabTS tests
         """ 
@@ -70,10 +76,10 @@ class Regressor():
         self.encoder = encoder
         self.normalizer = normalizer
 
-        X, _ = self._preprocessor(x, training = True)
+        X, _ = self._preprocessor(x, training=True)
         self.input_size = X.shape[1]
         self.output_size = 1
-        self.nb_epoch = nb_epoch 
+        self.nb_epoch = nb_epoch
         self.model = NeuralNetwork(self.input_size)
         self.loss_fn = loss_fn
         self.optimiser = optim.SGD(self.model.parameters(), lr=lr)
@@ -83,7 +89,7 @@ class Regressor():
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-    def _preprocessor(self, x, y = None, training = False):
+    def _preprocessor(self, x, y=None, training=False):
         """ 
         Preprocess input of the network.
           
@@ -108,24 +114,24 @@ class Regressor():
 
         # Replace this code with your own
         # Return preprocessed x and y, return None for y if it was None
-        
+
         # return x, (y if isinstance(y, pd.DataFrame) else None)
         x_filled = x.fillna(method="bfill", axis=1)
 
-        #TODO: encode all categorical values
-        x_filled["ocean_proximity"] = self.encoder.fit_transform(x_filled["ocean_proximity"]) if training else self.encoder.transform(x_filled["ocean_proximity"]) 
+        # TODO: encode all categorical values
+        x_filled["ocean_proximity"] = self.encoder.fit_transform(
+            x_filled["ocean_proximity"]) if training else self.encoder.transform(x_filled["ocean_proximity"])
 
-        #TODO: dont normalize ocean_proximity
-        x_norm = self.normalizer.fit_transform(x_filled) if training else self.normalizer.transform(x_filled) 
-        
+        # TODO: dont normalize ocean_proximity
+        x_norm = self.normalizer.fit_transform(x_filled) if training else self.normalizer.transform(x_filled)
+
         return from_numpy(x_norm).to(float32), (from_numpy(y.values.astype(np.float32)) if y is not None else None)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-        
-    def fit(self, x, y, debug = False):
+    def fit(self, x, y, debug=False):
         """
         Regressor training function
 
@@ -143,8 +149,8 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X, Y = self._preprocessor(x, y = y, training = True) # Do not forget
-        
+        X, Y = self._preprocessor(x, y=y, training=True)  # Do not forget
+
         for t in range(self.nb_epoch):
             y_hat = self.model(X)
             loss = self.loss_fn(y_hat, Y)
@@ -163,7 +169,6 @@ class Regressor():
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-            
     def predict(self, x):
         """
         Output the value corresponding to an input x.
@@ -181,7 +186,7 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X, _ = self._preprocessor(x, training = False) # Do not forget
+        X, _ = self._preprocessor(x, training=False)  # Do not forget
         return self.model(X).detach().numpy()
 
         #######################################################################
@@ -206,7 +211,7 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
+        X, Y = self._preprocessor(x, y=y, training=False)  # Do not forget
         y_hat = self.model(X)
         return mean_squared_error(y_hat.detach().numpy(), Y.detach().numpy())
 
@@ -214,8 +219,9 @@ class Regressor():
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+
 @catch_exception
-def save_regressor(trained_model): 
+def save_regressor(trained_model):
     """ 
     Utility function to save the trained regressor model in part2_model.pickle.
     """
@@ -224,8 +230,9 @@ def save_regressor(trained_model):
         pickle.dump(trained_model, target)
     print("\nSaved model in part2_model.pickle\n")
 
+
 @catch_exception
-def load_regressor(): 
+def load_regressor():
     """ 
     Utility function to load the trained regressor model in part2_model.pickle.
     """
@@ -237,7 +244,7 @@ def load_regressor():
 
 
 @catch_exception
-def RegressorHyperParameterSearch(): 
+def RegressorHyperParameterSearch():
     # Ensure to add whatever inputs you deem necessary to this function
     """
     Performs a hyper-parameter for fine-tuning the regressor implemented 
@@ -264,13 +271,12 @@ def RegressorHyperParameterSearch():
 
 @catch_exception
 def example_main():
-
     output_label = "median_house_value"
 
     # Use pandas to read CSV data as it contains various object types
     # Feel free to use another CSV reader tool
     # But remember that LabTS tests take Pandas DataFrame as inputs
-    data = pd.read_csv("housing.csv") 
+    data = pd.read_csv("housing.csv")
 
     # Splitting input and output
     x_train = data.loc[:, data.columns != output_label]
@@ -280,7 +286,7 @@ def example_main():
     # This example trains on the whole available dataset. 
     # You probably want to separate some held-out data 
     # to make sure the model isn't overfitting
-    regressor = Regressor(x_train, nb_epoch = 10)
+    regressor = Regressor(x_train, nb_epoch=10)
     regressor.fit(x_train, y_train)
     save_regressor(regressor)
 
