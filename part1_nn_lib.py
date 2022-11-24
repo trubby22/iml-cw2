@@ -3,6 +3,7 @@ import pickle
 import traceback
 
 import numpy as np
+from collections import deque
 
 ENABLE_CATCH_EXCEPTION = False
 ENABLE_LOGGING = False
@@ -308,9 +309,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        # self._W = np.zeros(shape=(n_in, n_out))
         self._W = xavier_init((n_in, n_out))
-        # self._b = np.zeros((1, n_out))
         self._b = xavier_init((1, n_out))
 
         self._cache_current = None
@@ -733,8 +732,7 @@ class Preprocessor(object):
         data: np.ndarray
         self.a = 0
         self.b = 1
-        self.x_min = np.min(data)
-        self.x_max = np.max(data)
+        self.min_max: deque = deque()
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -754,11 +752,23 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return self.a + (data - self.x_min) * (self.b - self.a) / (self.x_max - self.x_min)
+        data: np.ndarray
+        features = np.split(data, data.shape[1], axis=1)
+        self.min_max.clear()
+        transformed_features = [self.apply_helper(x) for x in features]
+        res = np.stack(transformed_features, axis=1)
+        res_squeezed = np.squeeze(res)
+        return res_squeezed
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
+    def apply_helper(self, data: np.ndarray):
+        min_val = np.min(data)
+        max_val = np.max(data)
+        self.min_max.append((min_val, max_val))
+        return self.a + (data - min_val) * (self.b - self.a) / (max_val - min_val)
 
     # @catch_exception
     def revert(self, data):
@@ -774,11 +784,20 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return self.x_min + (data - self.a) * (self.x_max - self.x_min) / (self.b - self.a)
+        data: np.ndarray
+        transformed_features = np.split(data, data.shape[1], axis=1)
+        original_features = [self.revert_helper(x) for x in transformed_features]
+        res = np.stack(original_features, axis=1)
+        res_squeezed = np.squeeze(res)
+        return res_squeezed
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
+
+    def revert_helper(self, data: np.ndarray):
+        min_val, max_val = self.min_max.popleft()
+        return min_val + (data - self.a) * (max_val - min_val) / (self.b - self.a)
 
 
 def example_main():

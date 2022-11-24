@@ -45,21 +45,21 @@ class TestPart1Methods(unittest.TestCase):
 
     def test_can_handle_different_layer_configs(self):
         networks = [
-            # MultiLayerNetwork(
-            #     4,
-            #     [100, 12, 3],
-            #     ['relu', 'sigmoid', 'relu']
-            # ),
+            MultiLayerNetwork(
+                4,
+                [100, 12, 3],
+                ['relu', 'sigmoid', 'relu']
+            ),
             MultiLayerNetwork(
                 4,
                 [3] * 10,
                 ['relu'] * 10
             ),
-            # MultiLayerNetwork(
-            #     4,
-            #     [2, 4, 3] * 3,
-            #     ['sigmoid', 'relu', 'identity'] * 3
-            # )
+            MultiLayerNetwork(
+                4,
+                [2, 4, 3] * 3,
+                ['sigmoid', 'relu', 'identity'] * 3
+            )
         ]
         for i in range(len(networks)):
             with self.subTest(i=i):
