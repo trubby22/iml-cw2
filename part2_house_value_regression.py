@@ -156,7 +156,7 @@ class Regressor():
         #######################################################################
 
         X, _ = self._preprocessor(x, training = False) # Do not forget
-        pass
+        return reshape(self.model(X), (-1,))
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -181,7 +181,8 @@ class Regressor():
         #######################################################################
 
         X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
-        return 0 # Replace this code with your own
+        y_hat = reshape(self.model(X), (-1,))
+        return self.loss_fn(y_hat, Y)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
