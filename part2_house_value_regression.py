@@ -1,3 +1,4 @@
+from datetime import datetime
 import itertools
 import pickle
 import numpy as np
@@ -13,6 +14,7 @@ from sklearn.model_selection import train_test_split
 
 import functools
 import traceback
+import wandb
 
 
 def catch_exception(f):
@@ -149,14 +151,14 @@ class Regressor():
         dl = DataLoader(dataset = dataset, batch_size = self.batch_size, shuffle=True)
 
         size = len(dataset)
-        batch_total_loss = 0
+        # batch_total_loss = 0
 
         for batch, (X, Y) in enumerate(dl):
             Y = reshape(Y, (-1, 1))
 
             y_hat = self.model(X)
             loss = self.loss_fn(y_hat, Y)
-            batch_total_loss += loss.item() * len(X)
+            batch_loss = loss.item() * len(X)
 
             self.optimiser.zero_grad()
             loss.backward()
@@ -166,7 +168,7 @@ class Regressor():
                 current = batch * len(X)
                 print(f"loss: {loss} [{current} / {size}]")
 
-        return batch_total_loss
+        return batch_loss
 
     def _test_loop(self, x, y, debug):
         dataset = TensorDataset(x, y)
@@ -187,7 +189,7 @@ class Regressor():
         return test_loss
 
         
-    def fit(self, x, y, val_size = 0.1, debug = False):
+    def fit(self, x, y, val_size = 0.1, debug = False, wandb_toggle = False):
         """
         Regressor training function
 
@@ -214,8 +216,14 @@ class Regressor():
             if debug:
                 print(f"Epoch {t + 1}\n-------------------------------")
             
-            self._train_loop(X, Y, debug)
-            self._test_loop(X_val, Y_val, debug)
+            last_train_loss = self._train_loop(X, Y, debug)
+            val_loss = self._test_loop(X_val, Y_val, debug)
+
+            if wandb_toggle:
+                wandb.log({
+                    "Loss of last training batch": last_train_loss,
+                    "Validation loss": val_loss
+                })
 
         return self
 
@@ -297,7 +305,7 @@ def load_regressor():
 
 
 @catch_exception
-def RegressorHyperParameterSearch(X, y, params, debug = False, train_debug = False):
+def RegressorHyperParameterSearch(X, y, params, wandb_toggle = False, wandb_project_name = f"Regressor Test - {datetime.now().strftime('%Y-%m-%d @ %H.%M.%S')}", debug = False, train_debug = False):
     # Ensure to add whatever inputs you deem necessary to this function
     """
     Performs a hyper-parameter for fine-tuning the regressor implemented 
@@ -323,16 +331,33 @@ def RegressorHyperParameterSearch(X, y, params, debug = False, train_debug = Fal
     for i, opts in enumerate(options):
         config_dict = dict(zip(params.keys(), opts))
         name = f"E{i}"
+
+        if wandb_toggle:
+            wandb.init(
+                name = name,
+                project = wandb_project_name,
+                entity = "mlcw",
+                config = config_dict,
+                tags = ['Experiment']
+            )
+
         print(f"Running experiment {name}")
+
         regressor = Regressor(X, **config_dict)
         if debug:
             print(regressor.model)
-        regressor.fit(x_train_and_validate, y_train_and_validate, debug=train_debug)
+        regressor.fit(x_train_and_validate, y_train_and_validate, wandb_toggle=wandb_toggle, debug=train_debug)
 
         test_loss = regressor.score(x_test, y_test, debug=debug)
 
+        wandb.log({
+            "Test Loss": test_loss
+        })
+
         if test_loss < best_config[0]:
             best_config = (test_loss, name, config_dict)
+
+    wandb.finish()
 
     return best_config[2]
         
@@ -392,4 +417,4 @@ if __name__ == "__main__":
     x = data.loc[:, data.columns != output_label]
     y = data.loc[:, [output_label]]
 
-    print(f"Best parameters: {RegressorHyperParameterSearch(x, y, params, debug=True)}")
+    print(f"Best parameters: {RegressorHyperParameterSearch(x, y, params, wandb_toggle=True, debug=True)}")
