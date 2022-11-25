@@ -1,3 +1,4 @@
+import itertools
 import pickle
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ from torchvision import transforms
 
 from sklearn.preprocessing import Normalizer, LabelBinarizer, StandardScaler, LabelEncoder
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
 
 import functools
 import traceback
@@ -43,7 +45,7 @@ class NeuralNetwork(nn.Module):
         self.layer_stack = nn.Sequential(
             nn.Linear(size, 32),
             nn.ReLU(),
-            nn.Linear(32, 16),
+            nn.Linear(32, 16), 
             nn.ReLU(),
             nn.Linear(16, 1)
         )
@@ -55,10 +57,9 @@ class NeuralNetwork(nn.Module):
 
 
 @catch_all_exceptions()
-class Regressor:
+class Regressor():
 
-    def __init__(self, x, encoder=LabelEncoder(), normalizer=StandardScaler(), loss_fn=nn.MSELoss(),
-                 validator=mean_squared_error, lr=0.001, nb_epoch=1000):
+    def __init__(self, x, encoder = LabelEncoder(), normalizer = StandardScaler(), loss_fn=nn.MSELoss(), batch_size = 64, validator=mean_squared_error, lr=0.001, nb_epoch = 1000):
         # You can add any input parameters you need
         # Remember to set them with a default value for LabTS tests
         """ 
@@ -83,6 +84,7 @@ class Regressor:
         X, _ = self._preprocessor(x, training=True)
         self.input_size = X.shape[1]
         self.output_size = 1
+        self.batch_size = batch_size
         self.nb_epoch = nb_epoch
         self.model = NeuralNetwork(self.input_size)
         self.loss_fn = loss_fn
@@ -128,25 +130,25 @@ class Regressor:
 
         if training:
             num_x_norm = self.normalizer.fit_transform(x_filled[num_cols])
-            cat_x_enc = self.encoder.fit_transform(x_filled[cat_cols]).reshape(-1, 1)
+            cat_x_enc = self.encoder.fit_transform(x_filled[cat_cols]).reshape(-1,1)
         else:
             num_x_norm = self.normalizer.transform(x_filled[num_cols])
-            cat_x_enc = self.encoder.transform(x_filled[cat_cols]).reshape(-1, 1)
+            cat_x_enc = self.encoder.transform(x_filled[cat_cols]).reshape(-1,1)
 
         x_concat = np.hstack((num_x_norm, cat_x_enc))
 
         if isinstance(y, pd.DataFrame):
             y = from_numpy(y.values.astype(np.float32))
-
+        
         return from_numpy(x_concat).to(float32), y
 
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-    def _train_loop(self, x, y, batch_size, debug):
+    def _train_loop(self, x, y, debug):
         dataset = TensorDataset(x, y)
-        dl = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
+        dl = DataLoader(dataset = dataset, batch_size = self.batch_size, shuffle=True)
 
         size = len(dataset)
         batch_total_loss = 0
@@ -168,7 +170,26 @@ class Regressor:
 
         return batch_total_loss
 
-    def fit(self, x, y, batch_size=32, debug=False):
+    def _test_loop(self, x, y, debug):
+        dataset = TensorDataset(x, y)
+        dl = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=True)
+        
+        num_batches = len(dl)
+        test_loss = 0
+        
+        with no_grad():
+            for X, Y in dl:
+                Y = reshape(Y, (-1, 1))
+                y_hat = self.model(X)
+                test_loss += self.loss_fn(y_hat, Y).item()
+
+        test_loss /= num_batches
+        if debug:
+            print(f"Test loss: {test_loss}")
+        return test_loss
+
+        
+    def fit(self, x, y, val_size = 0.1, debug = False):
         """
         Regressor training function
 
@@ -186,25 +207,17 @@ class Regressor:
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X, Y = self._preprocessor(x, y=y, training=True)  # Do not forget
+        X_train, X_val, y_train, y_val = train_test_split(x, y, test_size=val_size, random_state=42)
+        X, Y = self._preprocessor(X_train, y=y_train, training=True)  # Do not forget
+        X_val, Y_val = self._preprocessor(X_val, y=y_val)
 
         for t in range(self.nb_epoch):
-            # y_hat = self.model(X)
-            # loss = self.loss_fn(y_hat, Y)
-
-            # self.optimiser.zero_grad()
-            # loss.backward()
-            # self.optimiser.step()
-
-            total_loss = 0
 
             if debug:
                 print(f"Epoch {t + 1}\n-------------------------------")
-                # print(f"loss: {loss}")
-            total_loss += self._train_loop(X, Y, batch_size, debug)
-
-            if debug:
-                print(f"Average loss: {total_loss / len(X)}")
+            
+            self._train_loop(X, Y, debug)
+            self._test_loop(X_val, Y_val, debug)
 
         return self
 
@@ -236,7 +249,7 @@ class Regressor:
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-    def score(self, x, y, batch_size=32, debug=False):
+    def score(self, x, y, debug = False):
         """
         Function to evaluate the model accuracy on a validation dataset.
 
@@ -254,23 +267,8 @@ class Regressor:
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X_norm, Y_norm = self._preprocessor(x, y=y, training=False)  # Do not forget
-        dataset = TensorDataset(X_norm, Y_norm)
-        dl = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
-
-        num_batches = len(dl)
-        test_loss = 0
-
-        with no_grad():
-            for X, Y in dl:
-                Y = reshape(Y, (-1, 1))
-                y_hat = self.model(X)
-                test_loss += self.loss_fn(y_hat, Y).item()
-
-        test_loss /= num_batches
-        if debug:
-            print(f"Avg loss: {test_loss}")
-        return test_loss
+        X_norm, Y_norm = self._preprocessor(x, y = y, training = False) # Do not forget
+        return self._test_loop(X_norm, Y_norm, debug=debug)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -301,7 +299,7 @@ def load_regressor():
 
 
 @catch_exception
-def RegressorHyperParameterSearch():
+def RegressorHyperParameterSearch(X, y, params, debug = False):
     # Ensure to add whatever inputs you deem necessary to this function
     """
     Performs a hyper-parameter for fine-tuning the regressor implemented 
@@ -319,7 +317,26 @@ def RegressorHyperParameterSearch():
     #                       ** START OF YOUR CODE **
     #######################################################################
 
-    return  # Return the chosen hyper parameters
+    options = [x for x in itertools.product(*params.values())]
+    best_config = (float('inf'), None, None)
+
+    x_train_and_validate, x_test, y_train_and_validate, y_test = train_test_split(X, y, test_size=0.1)
+
+    for i, opts in enumerate(options):
+        config_dict = dict(zip(params.keys(), opts))
+        name = f"E{i}"
+        if debug:
+            print(f"Running experiment {name}")
+        regressor = Regressor(X, **config_dict)
+        regressor.fit(x_train_and_validate, y_train_and_validate, debug=debug)
+
+        test_loss = regressor.score(x_test, y_test, debug=debug)
+
+        if test_loss < best_config[0]:
+            best_config = (test_loss, name, config_dict)
+
+    return best_config[2]
+        
 
     #######################################################################
     #                       ** END OF YOUR CODE **
@@ -343,9 +360,9 @@ def example_main():
     # This example trains on the whole available dataset. 
     # You probably want to separate some held-out data 
     # to make sure the model isn't overfitting
-    regressor = Regressor(x_train, lr=1, nb_epoch=500)
+    regressor = Regressor(x_train, lr = 1, nb_epoch = 10)
     regressor.fit(x_train, y_train, debug=True)
-    save_regressor(regressor)
+    # save_regressor(regressor)
 
     # Error
     error = regressor.score(x_train, y_train)
@@ -353,4 +370,21 @@ def example_main():
 
 
 if __name__ == "__main__":
-    example_main()
+    params  = {
+        'lr' : [0.1, 0.01, 0.001],
+        'nb_epoch' : [10, 50, 100],
+        'batch_size' : [16, 32]
+    }
+    
+    output_label = "median_house_value"
+
+    # Use pandas to read CSV data as it contains various object types
+    # Feel free to use another CSV reader tool
+    # But remember that LabTS tests take Pandas DataFrame as inputs
+    data = pd.read_csv("housing.csv")
+
+    # Splitting input and output
+    x = data.loc[:, data.columns != output_label]
+    y = data.loc[:, [output_label]]
+
+    print(f"Best parameters: {RegressorHyperParameterSearch(x, y, params, debug=True)}")
