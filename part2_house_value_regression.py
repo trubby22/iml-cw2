@@ -130,10 +130,10 @@ class Regressor():
 
         if training:
             num_x_norm = self.normalizer.fit_transform(x_filled[num_cols])
-            cat_x_enc = self.encoder.fit_transform(x_filled[cat_cols]).reshape(-1,1)
+            cat_x_enc = self.encoder.fit_transform(x_filled[cat_cols].values.ravel()).reshape(-1, 1)
         else:
             num_x_norm = self.normalizer.transform(x_filled[num_cols])
-            cat_x_enc = self.encoder.transform(x_filled[cat_cols]).reshape(-1,1)
+            cat_x_enc = self.encoder.transform(x_filled[cat_cols].values.ravel()).reshape(-1, 1)
 
         x_concat = np.hstack((num_x_norm, cat_x_enc))
 
@@ -350,14 +350,15 @@ def RegressorHyperParameterSearch(X, y, params, wandb_toggle = False, wandb_proj
 
         test_loss = regressor.score(x_test, y_test, debug=debug)
 
-        wandb.log({
-            "Test Loss": test_loss
-        })
+        if wandb_toggle:
+            wandb.log({
+                "Test Loss": test_loss
+            })
 
         if test_loss < best_config[0]:
             best_config = (test_loss, name, config_dict)
 
-    wandb.finish()
+        wandb.finish()
 
     return best_config[2]
         
@@ -394,11 +395,11 @@ def example_main():
 
 
 if __name__ == "__main__":
-    params  = {
-        'lr' : [0.1, 0.01, 0.001],
-        'nb_epoch' : [10, 50, 100],
-        'batch_size' : [16, 32],
-        'layer_sizes' : [[9, 1], [9, 32, 1], [9, 32, 32, 1]],
+    params = {
+        'lr':[0.1, 0.01],
+        'nb_epoch':[100, 500],
+        'batch_size':[16, 32, 64],
+        'layer_sizes':[[9, 32, 1], [9, 32, 32, 1], [9, 64, 1], [9, 64, 64, 1]]
     }
 
     # params = {
