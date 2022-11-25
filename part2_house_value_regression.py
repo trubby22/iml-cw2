@@ -39,19 +39,17 @@ def catch_all_exceptions():
 
 @catch_all_exceptions()
 class NeuralNetwork(nn.Module):
-    def __init__(self, size):
+    def __init__(self, layer_sizes):
         super(NeuralNetwork, self).__init__()
-        self.flatten = nn.Flatten()
-        self.layer_stack = nn.Sequential(
-            nn.Linear(size, 32),
-            nn.ReLU(),
-            nn.Linear(32, 16), 
-            nn.ReLU(),
-            nn.Linear(16, 1)
-        )
+        layers = []
+        for i in range(len(layer_sizes) - 1):
+            layers.append(nn.Linear(layer_sizes[i], layer_sizes[i+1]))
+            if i != len(layer_sizes) - 2:
+                layers.append(nn.ReLU())
+            
+        self.layer_stack = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.flatten(x)
         logits = self.layer_stack(x)
         return logits
 
@@ -59,7 +57,7 @@ class NeuralNetwork(nn.Module):
 @catch_all_exceptions()
 class Regressor():
 
-    def __init__(self, x, encoder = LabelEncoder(), normalizer = StandardScaler(), loss_fn=nn.MSELoss(), batch_size = 64, validator=mean_squared_error, lr=0.001, nb_epoch = 1000):
+    def __init__(self, x, layer_sizes = [9, 1],  encoder = LabelEncoder(), normalizer = StandardScaler(), loss_fn=nn.MSELoss(), batch_size = 64, validator=mean_squared_error, lr=0.001, nb_epoch = 1000):
         # You can add any input parameters you need
         # Remember to set them with a default value for LabTS tests
         """ 
@@ -86,7 +84,7 @@ class Regressor():
         self.output_size = 1
         self.batch_size = batch_size
         self.nb_epoch = nb_epoch
-        self.model = NeuralNetwork(self.input_size)
+        self.model = NeuralNetwork(layer_sizes)
         self.loss_fn = loss_fn
         self.validator = validator
         self.optimiser = optim.Adam(self.model.parameters(), lr=lr)
@@ -299,7 +297,7 @@ def load_regressor():
 
 
 @catch_exception
-def RegressorHyperParameterSearch(X, y, params, debug = False):
+def RegressorHyperParameterSearch(X, y, params, debug = False, train_debug = False):
     # Ensure to add whatever inputs you deem necessary to this function
     """
     Performs a hyper-parameter for fine-tuning the regressor implemented 
@@ -325,10 +323,11 @@ def RegressorHyperParameterSearch(X, y, params, debug = False):
     for i, opts in enumerate(options):
         config_dict = dict(zip(params.keys(), opts))
         name = f"E{i}"
-        if debug:
-            print(f"Running experiment {name}")
+        print(f"Running experiment {name}")
         regressor = Regressor(X, **config_dict)
-        regressor.fit(x_train_and_validate, y_train_and_validate, debug=debug)
+        if debug:
+            print(regressor.model)
+        regressor.fit(x_train_and_validate, y_train_and_validate, debug=train_debug)
 
         test_loss = regressor.score(x_test, y_test, debug=debug)
 
@@ -373,8 +372,14 @@ if __name__ == "__main__":
     params  = {
         'lr' : [0.1, 0.01, 0.001],
         'nb_epoch' : [10, 50, 100],
-        'batch_size' : [16, 32]
+        'batch_size' : [16, 32],
+        'layer_sizes' : [[9, 1], [9, 32, 1], [9, 32, 32, 1]],
     }
+
+    # params = {
+    #     'nb_epoch' : [10],
+    #     'layer_sizes' : [[9, 1], [9, 32, 1], [9, 32, 32, 1]]
+    # }
     
     output_label = "median_house_value"
 
