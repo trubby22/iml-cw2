@@ -1,5 +1,5 @@
-numpy~=1.23.4
-torch~=1.13.0
+numpy~=1.23.3
+torch~=1.10.2
 pandas==1.4.4
 matplotlib==3.6.0
 scikit-learn==1.1.2
