@@ -48,12 +48,12 @@ class TestPart1Methods(unittest.TestCase):
             MultiLayerNetwork(
                 4,
                 [100, 12, 3],
-                ['relu', 'sigmoid', 'relu']
+                ['relu', 'sigmoid', 'identity']
             ),
             MultiLayerNetwork(
                 4,
-                [3] * 10,
-                ['relu'] * 10
+                [3] * 11,
+                ['relu'] * 10 + ['identity']
             ),
             MultiLayerNetwork(
                 4,

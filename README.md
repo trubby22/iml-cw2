@@ -8,6 +8,10 @@
 
 `python part1_nn_lib.py`
 
+###### Additional tests / use-cases
+
+`python test_part1_nn_lib.py`
+
 #### Part 2
 
 `python part2_house_value_regression.py`
