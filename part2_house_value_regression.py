@@ -43,7 +43,7 @@ class NeuralNetwork(nn.Module):
         self.layer_stack = nn.Sequential(
             nn.Linear(size, 32),
             nn.ReLU(),
-            nn.Linear(32, 16), 
+            nn.Linear(32, 16),
             nn.ReLU(),
             nn.Linear(16, 1)
         )
@@ -55,9 +55,10 @@ class NeuralNetwork(nn.Module):
 
 
 @catch_all_exceptions()
-class Regressor():
+class Regressor:
 
-    def __init__(self, x, encoder = LabelEncoder(), normalizer = StandardScaler(), loss_fn=nn.MSELoss(), validator=mean_squared_error, lr=0.001, nb_epoch = 1000):
+    def __init__(self, x, encoder=LabelEncoder(), normalizer=StandardScaler(), loss_fn=nn.MSELoss(),
+                 validator=mean_squared_error, lr=0.001, nb_epoch=1000):
         # You can add any input parameters you need
         # Remember to set them with a default value for LabTS tests
         """ 
@@ -127,16 +128,16 @@ class Regressor():
 
         if training:
             num_x_norm = self.normalizer.fit_transform(x_filled[num_cols])
-            cat_x_enc = self.encoder.fit_transform(x_filled[cat_cols]).reshape(-1,1)
+            cat_x_enc = self.encoder.fit_transform(x_filled[cat_cols]).reshape(-1, 1)
         else:
             num_x_norm = self.normalizer.transform(x_filled[num_cols])
-            cat_x_enc = self.encoder.transform(x_filled[cat_cols]).reshape(-1,1)
+            cat_x_enc = self.encoder.transform(x_filled[cat_cols]).reshape(-1, 1)
 
         x_concat = np.hstack((num_x_norm, cat_x_enc))
 
         if isinstance(y, pd.DataFrame):
             y = from_numpy(y.values.astype(np.float32))
-        
+
         return from_numpy(x_concat).to(float32), y
 
         #######################################################################
@@ -145,7 +146,7 @@ class Regressor():
 
     def _train_loop(self, x, y, batch_size, debug):
         dataset = TensorDataset(x, y)
-        dl = DataLoader(dataset = dataset, batch_size = batch_size, shuffle=True)
+        dl = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
 
         size = len(dataset)
         batch_total_loss = 0
@@ -167,8 +168,7 @@ class Regressor():
 
         return batch_total_loss
 
-        
-    def fit(self, x, y, batch_size = 32, debug = False):
+    def fit(self, x, y, batch_size=32, debug=False):
         """
         Regressor training function
 
@@ -206,7 +206,6 @@ class Regressor():
             if debug:
                 print(f"Average loss: {total_loss / len(X)}")
 
-
         return self
 
         #######################################################################
@@ -237,7 +236,7 @@ class Regressor():
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-    def score(self, x, y, batch_size = 32, debug = False):
+    def score(self, x, y, batch_size=32, debug=False):
         """
         Function to evaluate the model accuracy on a validation dataset.
 
@@ -255,13 +254,13 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X_norm, Y_norm = self._preprocessor(x, y = y, training = False) # Do not forget
+        X_norm, Y_norm = self._preprocessor(x, y=y, training=False)  # Do not forget
         dataset = TensorDataset(X_norm, Y_norm)
         dl = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
 
         num_batches = len(dl)
         test_loss = 0
-        
+
         with no_grad():
             for X, Y in dl:
                 Y = reshape(Y, (-1, 1))
@@ -272,7 +271,6 @@ class Regressor():
         if debug:
             print(f"Avg loss: {test_loss}")
         return test_loss
-
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -345,7 +343,7 @@ def example_main():
     # This example trains on the whole available dataset. 
     # You probably want to separate some held-out data 
     # to make sure the model isn't overfitting
-    regressor = Regressor(x_train, lr = 1, nb_epoch = 500)
+    regressor = Regressor(x_train, lr=1, nb_epoch=500)
     regressor.fit(x_train, y_train, debug=True)
     save_regressor(regressor)
 
