@@ -14,7 +14,11 @@ from sklearn.model_selection import train_test_split
 
 import functools
 import traceback
-import wandb
+
+try:
+    import wandb
+except:
+    pass
 
 
 def catch_exception(f):
