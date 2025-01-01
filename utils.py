@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 
 
@@ -21,8 +23,11 @@ def transform_test_results_csv():
         test_loss,
         training_loss
     ]]
-    new_metric = 'Relative test and training loss difference'
+    new_metric = 'Rel diff'
+    df[test_loss] = df[test_loss].apply(math.sqrt)
+    df[training_loss] = df[training_loss].apply(math.sqrt)
     df[new_metric] = (df[test_loss] - df[training_loss]) / df[training_loss]
+    df = df.dropna()
     df.sort_values(by=[test_loss, new_metric])
     relevant_columns = [test_loss, training_loss]
     for x in relevant_columns:
